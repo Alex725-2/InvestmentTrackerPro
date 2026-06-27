@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using InvestmentTracker.Server.Models;
 using InvestmentTracker.Server.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace InvestmentTracker.Server.Data
 {
@@ -18,7 +19,7 @@ namespace InvestmentTracker.Server.Data
                 await roleManager.CreateAsync(new IdentityRole("Admin"));
             }
 
-            // Создаём тестового пользователя-админа
+            // 1. Главный администратор
             var adminEmail = "admin@example.com";
             var adminUser = await userManager.FindByEmailAsync(adminEmail);
             if (adminUser == null)
@@ -29,10 +30,28 @@ namespace InvestmentTracker.Server.Data
                     Email = adminEmail,
                     FullName = "Admin User"
                 };
-                var result = await userManager.CreateAsync(adminUser, "Admin123!");
+                var result = await userManager.CreateAsync(adminUser, "Admin123!"); // потом сменим
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(adminUser, "Admin");
+                }
+            }
+
+            // 2. Наставник (для аудита)
+            var mentorEmail = "mentor@test.com";
+            var mentorUser = await userManager.FindByEmailAsync(mentorEmail);
+            if (mentorUser == null)
+            {
+                mentorUser = new ApplicationUser
+                {
+                    UserName = "mentor",
+                    Email = mentorEmail,
+                    FullName = "Mentor"
+                };
+                var result = await userManager.CreateAsync(mentorUser, "dfhsjkd324#76##FQ");
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(mentorUser, "Admin");
                 }
             }
 

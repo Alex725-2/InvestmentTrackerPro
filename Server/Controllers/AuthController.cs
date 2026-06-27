@@ -66,6 +66,8 @@ namespace InvestmentTracker.Server.Controllers
             }
 
             var token = GenerateJwtToken(user);
+            user.LastLoginDate = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
             return Ok(new AuthResponse { IsSuccess = true, Token = token, Message = "Login successful" });
         }
 

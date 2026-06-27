@@ -6,5 +6,7 @@ namespace InvestmentTracker.Server.Models
     {
         // Здесь можно добавить дополнительные поля, например, полное имя
         public string? FullName { get; set; }
+
+        public DateTime? LastLoginDate { get; set; }
     }
 }
