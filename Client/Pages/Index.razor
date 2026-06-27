@@ -16,12 +16,32 @@
         <div class="row mb-3">
             <div class="col">
                 <h1 class="d-inline">Welcome, @userName!</h1>
-               tst2
                 <button class="btn btn-danger ms-3" @onclick="Logout">
                     <span class="oi oi-account-logout"></span> Logout
                 </button>
             </div>
         </div>
+
+        @if (isAdmin)
+        {
+            <div class="row mb-3">
+                <div class="col">
+                    <div class="alert alert-info d-flex align-items-center">
+                        <strong>Администратор:</strong>
+                        <a href="/swagger" target="_blank" class="btn btn-sm btn-outline-primary ms-2">Swagger</a>
+                        <a href="/admin/users" class="btn btn-sm btn-outline-primary ms-2">Пользователи</a>
+                        <button class="btn btn-sm btn-outline-secondary ms-2" @onclick="ShowToken">Показать токен</button>
+                    </div>
+                    @if (!string.IsNullOrEmpty(tokenDisplay))
+                    {
+                        <div class="alert alert-light border">
+                            <small><strong>JWT Token:</strong></small>
+                            <pre class="mb-0">@tokenDisplay</pre>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
 
         @if (!string.IsNullOrEmpty(globalError))
         {
@@ -249,6 +269,7 @@
 
 @code {
     private bool isAuthenticated;
+    private bool isAdmin;
     private string? userName;
     private List<TopPositionDto>? topPositions;
     private DashboardSummaryDto? summary;
@@ -259,6 +280,8 @@
     private string? topError;
     private string? summaryError;
     private string? historyError;
+
+    private string? tokenDisplay;
 
     protected override async Task OnInitializedAsync()
     {
@@ -276,6 +299,7 @@
         var user = authState.User;
         isAuthenticated = user.Identity?.IsAuthenticated ?? false;
         userName = isAuthenticated ? user.FindFirst("fullName")?.Value ?? user.FindFirst(ClaimTypes.Email)?.Value : null;
+        isAdmin = isAuthenticated && user.IsInRole("Admin");
     }
 
     private async Task LoadUserData()
@@ -350,6 +374,7 @@
         ClearData();
         isAuthenticated = false;
         userName = null;
+        isAdmin = false;
         StateHasChanged();
     }
 
@@ -363,6 +388,13 @@
         topError = null;
         summaryError = null;
         historyError = null;
+        tokenDisplay = null;
+    }
+
+    private async Task ShowToken()
+    {
+        var token = await AuthService.GetToken();
+        tokenDisplay = token ?? "Токен не найден";
     }
 
     public void Dispose() => AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;

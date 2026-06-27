@@ -1,5 +1,59 @@
-﻿<h3>Users</h3>
+﻿@page "/admin/users"
+@using InvestmentTracker.Shared.Models
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<h3>Управление пользователями</h3>
+
+@if (users == null)
+{
+    <p>Загрузка...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+else if (users.Count == 0)
+{
+    <p>Нет зарегистрированных пользователей.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Email</th>
+                <th>Полное имя</th>
+                <th>Последняя активность</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var user in users)
+            {
+                <tr>
+                    <td>@user.Email</td>
+                    <td>@user.FullName</td>
+                    <td>@(user.LastLoginDate?.ToString("dd.MM.yyyy HH:mm") ?? "Никогда")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
 
 @code {
+    private List<UserDto>? users;
+    private string? errorMessage;
 
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            users = await Http.GetFromJsonAsync<List<UserDto>>("api/admin/users") ?? new();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ошибка загрузки: {ex.Message}";
+            users = new();
+        }
+    }
 }
