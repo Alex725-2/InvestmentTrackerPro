@@ -4,6 +4,9 @@
 @using InvestmentTracker.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Globalization
+@using Microsoft.Extensions.Localization
+@using InvestmentTracker.Client.Resources
+@inject IStringLocalizer<SharedResource> Localizer
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IAuthService AuthService
 @inject HttpClient Http
@@ -15,9 +18,9 @@
     {
         <div class="row mb-3">
             <div class="col">
-                <h1 class="d-inline">Welcome, @userName!</h1>
+                <h1 class="d-inline">@Localizer["Welcome"], @userName!</h1>
                 <button class="btn btn-danger ms-3" @onclick="Logout">
-                    <span class="oi oi-account-logout"></span> Logout
+                    <span class="oi oi-account-logout"></span> @Localizer["Logout"]
                 </button>
             </div>
         </div>
@@ -27,10 +30,10 @@
             <div class="row mb-3">
                 <div class="col">
                     <div class="alert alert-info d-flex align-items-center">
-                        <strong>Администратор:</strong>
-                        <a href="/swagger" target="_blank" class="btn btn-sm btn-outline-primary ms-2">Swagger</a>
-                        <a href="/admin/users" class="btn btn-sm btn-outline-primary ms-2">Пользователи</a>
-                        <button class="btn btn-sm btn-outline-secondary ms-2" @onclick="ShowToken">Показать токен</button>
+                        <strong>@Localizer["Admin"]:</strong>
+                        <a href="/swagger" target="_blank" class="btn btn-sm btn-outline-primary ms-2">@Localizer["Swagger"]</a>
+                        <a href="/admin/users" class="btn btn-sm btn-outline-primary ms-2">@Localizer["AdminUsers"]</a>
+                        <button class="btn btn-sm btn-outline-secondary ms-2" @onclick="ShowToken">@Localizer["ShowToken"]</button>
                     </div>
                     @if (!string.IsNullOrEmpty(tokenDisplay))
                     {
@@ -53,23 +56,25 @@
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card shadow-sm h-100">
                     <div class="card-body">
-                        <h5 class="card-title">📈 Top Positions</h5>
+                        <h5 class="card-title">📈 @Localizer["TopPositions"]</h5>
                         @if (topError != null)
                         {
                             <div class="alert alert-danger small">@topError</div>
                         }
                         else if (topPositions == null)
                         {
-                            <p class="text-muted">Loading...</p>
+
+                            <p class="text-muted">@Localizer["Loading"]</p>
                         }
                         else if (topPositions.Count == 0)
                         {
-                            <p class="text-muted">No positions yet.</p>
+
+                            <p class="text-muted">@Localizer["NoPositions"]</p>
                         }
                         else
                         {
                             <table class="table table-sm table-borderless">
-                                <thead><tr><th>Ticker</th><th>Price</th><th>Change</th><th>Value</th></tr></thead>
+                                <thead><tr><th>@Localizer["Ticker"]</th><th>@Localizer["Price"]</th><th>@Localizer["Change"]</th><th>@Localizer["Value"]</th></tr></thead>
                                 <tbody>
                                     @foreach (var pos in topPositions)
                                     {
@@ -91,7 +96,7 @@
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card shadow-sm h-100">
                     <div class="card-body">
-                        <h5 class="card-title">💰 Total Value</h5>
+                        <h5 class="card-title">💰 @Localizer["TotalValue"]</h5>
                         @if (summaryError != null)
                         {
                             <div class="alert alert-danger small">@summaryError</div>
@@ -99,11 +104,12 @@
                         else if (summary != null)
                         {
                             <h3 class="card-text">@summary.TotalMarketValue.ToString("C2")</h3>
-                            <p class="text-muted">Today: <span class="@(summary.TodayPnL >= 0 ? "text-success" : "text-danger")">@summary.TodayPnL.ToString("C2")</span></p>
+                            <p class="text-muted">@Localizer["Today"]: <span class="@(summary.TodayPnL >= 0 ? "text-success" : "text-danger")">@summary.TodayPnL.ToString("C2")</span></p>
                         }
                         else
                         {
-                            <p class="text-muted">Loading...</p>
+
+                            <p class="text-muted">@Localizer["Loading"]</p>
                         }
                     </div>
                 </div>
@@ -113,7 +119,7 @@
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card shadow-sm h-100">
                     <div class="card-body">
-                        <h5 class="card-title">📊 Total P&L</h5>
+                        <h5 class="card-title">📊 @Localizer["TotalPL"]</h5>
                         @if (summaryError != null)
                         {
                             <div class="alert alert-danger small">@summaryError</div>
@@ -124,7 +130,8 @@
                         }
                         else
                         {
-                            <p class="text-muted">Loading...</p>
+
+                            <p class="text-muted">@Localizer["Loading"]</p>
                         }
                     </div>
                 </div>
@@ -134,7 +141,7 @@
             <div class="col-md-6 col-lg-6 mb-4">
                 <div class="card shadow-sm h-100">
                     <div class="card-body">
-                        <h5 class="card-title">📌 Allocation</h5>
+                        <h5 class="card-title">📌 @Localizer["Allocation"]</h5>
                         @if (summaryError != null)
                         {
                             <div class="alert alert-danger small">@summaryError</div>
@@ -153,7 +160,7 @@
                         }
                         else
                         {
-                            <p class="text-muted">No data yet.</p>
+                            <p class="text-muted">@Localizer["NoData"]</p>
                         }
                     </div>
                 </div>
@@ -163,23 +170,25 @@
             <div class="col-md-6 col-lg-6 mb-4">
                 <div class="card shadow-sm h-100">
                     <div class="card-body">
-                        <h5 class="card-title">📈 History (7 days)</h5>
+                        <h5 class="card-title">📈 @Localizer["History"]</h5>
                         @if (historyError != null)
                         {
                             <div class="alert alert-danger small">@historyError</div>
                         }
                         else if (history == null)
                         {
-                            <p class="text-muted">Loading...</p>
+
+                            <p class="text-muted">@Localizer["Loading"]</p>
                         }
                         else if (history.Count == 0)
                         {
-                            <p class="text-muted">No history yet.</p>
+
+                            <p class="text-muted">@Localizer["NoHistory"]</p>
                         }
                         else
                         {
                             <table class="table table-sm table-striped">
-                                <thead><tr><th>Date</th><th>Total Value</th></tr></thead>
+                                <thead><tr><th>@Localizer["Date"]</th><th>@Localizer["TotalValue"]</th></tr></thead>
                                 <tbody>
                                     @foreach (var point in history)
                                     {
@@ -199,16 +208,15 @@
         <div class="text-center mb-4">
             <h1>Investment Tracker</h1>
             <p class="lead">Персональный учёт инвестиций с рыночными данными Московской биржи</p>
-            <a class="btn btn-primary" href="/login">Войти</a>
-            <a class="btn btn-outline-secondary ms-2" href="/register">Регистрация</a>
+            <a class="btn btn-primary" href="/login">@Localizer["Login"]</a>
+            <a class="btn btn-outline-secondary ms-2" href="/register">@Localizer["Register"]</a>
         </div>
 
         <div class="row">
-            <!-- Индекс Мосбиржи -->
             <div class="col-md-3 mb-4">
                 <div class="card shadow-sm">
                     <div class="card-body text-center">
-                        <h5>Индекс Мосбиржи</h5>
+                        <h5>@Localizer["MoscowExchangeIndex"]</h5>
                         <h2>@(market?.IndexValue?.ToString("F2") ?? "—")</h2>
                         <span class="@(market?.IndexChangePct >= 0 ? "text-success" : "text-danger")">
                             @(market?.IndexChangePct?.ToString("+0.00;-0.00") ?? "")%
@@ -216,23 +224,19 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Статус торгов -->
             <div class="col-md-3 mb-4">
                 <div class="card shadow-sm">
                     <div class="card-body text-center">
-                        <h5>Статус</h5>
+                        <h5>@Localizer["Status"]</h5>
                         <h4>@market?.TradingStatus</h4>
-                        <small>Закрытие: @market?.SessionCloseTime</small>
+                        <small>@Localizer["Closing"]: @market?.SessionCloseTime</small>
                     </div>
                 </div>
             </div>
-
-            <!-- Лидеры роста -->
             <div class="col-md-3 mb-4">
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        <h5>🚀 Лидеры роста</h5>
+                        <h5>🚀 @Localizer["TopGainers"]</h5>
                         @if (market?.TopGainers != null)
                         {
                             <ul class="list-unstyled">
@@ -245,12 +249,10 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Лидеры падения -->
             <div class="col-md-3 mb-4">
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        <h5>📉 Лидеры падения</h5>
+                        <h5>📉 @Localizer["TopLosers"]</h5>
                         @if (market?.TopLosers != null)
                         {
                             <ul class="list-unstyled">
@@ -275,22 +277,15 @@
     private DashboardSummaryDto? summary;
     private List<HistoryPointDto>? history;
     private MarketSnapshotDto? market;
-
-    private string? globalError;
-    private string? topError;
-    private string? summaryError;
-    private string? historyError;
-
+    private string? globalError, topError, summaryError, historyError;
     private string? tokenDisplay;
 
     protected override async Task OnInitializedAsync()
     {
         AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
         await UpdateAuthState();
-        if (!isAuthenticated)
-            await LoadMarketSnapshot();
-        else
-            await LoadUserData();
+        if (!isAuthenticated) await LoadMarketSnapshot();
+        else await LoadUserData();
     }
 
     private async Task UpdateAuthState()
@@ -304,67 +299,23 @@
 
     private async Task LoadUserData()
     {
-        globalError = null;
-        topError = null;
-        summaryError = null;
-        historyError = null;
-
-        // top5
-        try
-        {
-            topPositions = await Http.GetFromJsonAsync<List<TopPositionDto>>("api/portfolio/top5") ?? new();
-        }
-        catch (Exception ex)
-        {
-            topError = $"Top5 error: {ex.Message}";
-            topPositions = new();
-        }
-
-        // summary
-        try
-        {
-            summary = await Http.GetFromJsonAsync<DashboardSummaryDto>("api/portfolio/summary");
-        }
-        catch (Exception ex)
-        {
-            summaryError = $"Summary error: {ex.Message}";
-            summary = null;
-        }
-
-        // history
-        try
-        {
-            history = await Http.GetFromJsonAsync<List<HistoryPointDto>>("api/portfolio/history") ?? new();
-        }
-        catch (Exception ex)
-        {
-            historyError = $"History error: {ex.Message}";
-            history = new();
-        }
-
+        globalError = topError = summaryError = historyError = null;
+        try { topPositions = await Http.GetFromJsonAsync<List<TopPositionDto>>("api/portfolio/top5") ?? new(); } catch (Exception ex) { topError = $"Top5 error: {ex.Message}"; topPositions = new(); }
+        try { summary = await Http.GetFromJsonAsync<DashboardSummaryDto>("api/portfolio/summary"); } catch (Exception ex) { summaryError = $"Summary error: {ex.Message}"; summary = null; }
+        try { history = await Http.GetFromJsonAsync<List<HistoryPointDto>>("api/portfolio/history") ?? new(); } catch (Exception ex) { historyError = $"History error: {ex.Message}"; history = new(); }
         StateHasChanged();
     }
 
     private async Task LoadMarketSnapshot()
     {
-        try
-        {
-            market = await Http.GetFromJsonAsync<MarketSnapshotDto>("api/market/snapshot");
-        }
-        catch
-        {
-            market = new();
-        }
+        try { market = await Http.GetFromJsonAsync<MarketSnapshotDto>("api/market/snapshot"); } catch { market = new(); }
     }
 
     private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
     {
         await UpdateAuthState();
         ClearData();
-        if (isAuthenticated)
-            await LoadUserData();
-        else
-            await LoadMarketSnapshot();
+        if (isAuthenticated) await LoadUserData(); else await LoadMarketSnapshot();
         StateHasChanged();
     }
 
@@ -372,30 +323,17 @@
     {
         await AuthService.Logout();
         ClearData();
-        isAuthenticated = false;
-        userName = null;
-        isAdmin = false;
+        isAuthenticated = false; userName = null; isAdmin = false;
         StateHasChanged();
     }
 
     private void ClearData()
     {
-        topPositions = null;
-        summary = null;
-        history = null;
-        market = null;
-        globalError = null;
-        topError = null;
-        summaryError = null;
-        historyError = null;
-        tokenDisplay = null;
+        topPositions = null; summary = null; history = null; market = null;
+        globalError = topError = summaryError = historyError = null; tokenDisplay = null;
     }
 
-    private async Task ShowToken()
-    {
-        var token = await AuthService.GetToken();
-        tokenDisplay = token ?? "Токен не найден";
-    }
+    private async Task ShowToken() { tokenDisplay = await AuthService.GetToken(); }
 
     public void Dispose() => AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
 }

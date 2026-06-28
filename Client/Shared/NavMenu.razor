@@ -1,55 +1,59 @@
-﻿@using InvestmentTracker.Client.Services
+﻿@using Microsoft.Extensions.Localization
+@using InvestmentTracker.Client.Resources
+@using InvestmentTracker.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
-@inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> Localizer
 @inject IAuthService AuthService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 @implements IDisposable
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">InvestmentTracker</a>
+        <a class="navbar-brand" href="">Investment Tracker</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
             <span class="navbar-toggler-icon"></span>
         </button>
     </div>
 </div>
+
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="oi oi-home" aria-hidden="true"></span> Home
+                <span class="oi oi-home" aria-hidden="true"></span> @Localizer["Home"]
             </NavLink>
         </div>
         @if (isLoggedIn)
         {
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="brokers">
-                    <span class="oi oi-briefcase"></span> Brokers
+                    <span class="oi oi-briefcase"></span> @Localizer["Brokers"]
                 </NavLink>
             </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="accounts">
-                    <span class="oi oi-dollar"></span> Accounts
+                    <span class="oi oi-dollar"></span> @Localizer["Accounts"]
                 </NavLink>
             </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="securities">
-                    <span class="oi oi-list"></span> Securities
+                    <span class="oi oi-list"></span> @Localizer["Securities"]
                 </NavLink>
             </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="transactions">
-                    <span class="oi oi-transfer"></span> Transactions
+                    <span class="oi oi-transfer"></span> @Localizer["Transactions"]
                 </NavLink>
             </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="portfolio">
-                    <span class="oi oi-bar-chart"></span> Portfolio
+                    <span class="oi oi-bar-chart"></span> @Localizer["Portfolio"]
                 </NavLink>
             </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="analytics">
-                    <span class="oi oi-pie-chart"></span> Analytics
+                    <span class="oi oi-pie-chart"></span> @Localizer["Analytics"]
                 </NavLink>
             </div>
         }
@@ -57,35 +61,37 @@
         {
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="login">
-                    <span class="oi oi-account-login"></span> Login
+                    <span class="oi oi-account-login"></span> @Localizer["Login"]
                 </NavLink>
             </div>
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="register">
-                    <span class="oi oi-person"></span> Register
+                    <span class="oi oi-person"></span> @Localizer["Register"]
                 </NavLink>
             </div>
         }
-        <div class="nav-item px-3">
+     <!--   <div class="nav-item px-3">
             <NavLink class="nav-link" href="about">
-                <span class="oi oi-info"></span> About
+                <span class="oi oi-info"></span> @Localizer["About"]
             </NavLink>
         </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="help">
-                <span class="oi oi-question-mark"></span> Help
+                <span class="oi oi-question-mark"></span> @Localizer["Help"]
             </NavLink>
         </div>
+        -->
         @if (isLoggedIn)
         {
             <div class="nav-item px-3 mt-3">
                 <button class="btn btn-danger btn-sm w-100 text-start" @onclick="Logout">
-                    <span class="oi oi-account-logout"></span> Logout
+                    <span class="oi oi-account-logout"></span> @Localizer["Logout"]
                 </button>
             </div>
         }
     </nav>
 </div>
+
 @code {
     private bool collapseNavMenu = true;
     private bool isLoggedIn;
@@ -93,7 +99,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Подписываемся на изменение состояния
         AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
         await UpdateAuthState();
     }
@@ -109,10 +114,7 @@
         await UpdateAuthState();
     }
 
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
-    }
+    private void ToggleNavMenu() => collapseNavMenu = !collapseNavMenu;
 
     private async Task Logout()
     {
@@ -120,8 +122,5 @@
         Navigation.NavigateTo("/");
     }
 
-    public void Dispose()
-    {
-        AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
-    }
+    public void Dispose() => AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
 }
