@@ -1,17 +1,20 @@
 ﻿@page "/analytics"
 @using InvestmentTracker.Shared.Models
+@using Microsoft.Extensions.Localization
+@using InvestmentTracker.Client.Resources
 @inject HttpClient Http
+@inject IStringLocalizer<SharedResource> Localizer
 
-<h3>Portfolio Analytics</h3>
+<h3>@Localizer["PortfolioAnalytics"]</h3>
 
 <div class="row">
     <div class="col-md-6">
         <div class="card shadow-sm mb-4">
             <div class="card-body">
-                <h5>Top Positions</h5>
+                <h5>@Localizer["TopPositionsTable"]</h5>
                 <table class="table table-sm">
                     <thead>
-                        <tr><th>Ticker</th><th>Value</th><th>Change</th></tr>
+                        <tr><th>@Localizer["Ticker"]</th><th>@Localizer["Value"]</th><th>@Localizer["Change"]</th></tr>
                     </thead>
                     <tbody>
                         @if (topPositions != null)
@@ -33,7 +36,7 @@
     <div class="col-md-6">
         <div class="card shadow-sm mb-4">
             <div class="card-body">
-                <h5>Allocation</h5>
+                <h5>@Localizer["AllocationTitle"]</h5>
                 @if (summary?.Allocation != null)
                 {
                     @foreach (var alloc in summary.Allocation)

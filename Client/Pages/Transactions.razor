@@ -1,13 +1,16 @@
 ﻿@page "/transactions"
 @using InvestmentTracker.Shared.Models
+@using Microsoft.Extensions.Localization
+@using InvestmentTracker.Client.Resources
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> Localizer
 
-<h3>My Transactions</h3>
+<h3>@Localizer["MyTransactions"]</h3>
 
 @if (transactions == null)
 {
-    <p>Loading...</p>
+    <p>@Localizer["Loading"]</p>
 }
 else if (errorMessage != null)
 {
@@ -15,22 +18,22 @@ else if (errorMessage != null)
 }
 else if (transactions.Count == 0)
 {
-    <p>No transactions yet.</p>
+    <p>@Localizer["NoTransactions"]</p>
 }
 else
 {
     <table class="table table-striped">
         <thead>
             <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Security</th>
-                <th>Account</th>
-                <th>Quantity</th>
-                <th>Price</th>
-                <th>Commission</th>
-                <th>Total</th>
-                <th></th>
+                <th>@Localizer["Date"]</th>
+                <th>@Localizer["TransactionType"]</th>
+                <th>@Localizer["SecurityName"]</th>
+                <th>@Localizer["AccountNumber"]</th>
+                <th>@Localizer["Quantity"]</th>
+                <th>@Localizer["Price"]</th>
+                <th>@Localizer["Commission"]</th>
+                <th>@Localizer["Total"]</th>
+                <th>@Localizer["Actions"]</th>
             </tr>
         </thead>
         <tbody>
@@ -39,7 +42,7 @@ else
                 var total = t.Quantity * t.Price;
                 <tr>
                     <td>@t.Date.ToShortDateString()</td>
-                    <td>@(t.Type == TransactionType.Buy ? "Buy" : "Sell")</td>
+                    <td>@(t.Type == TransactionType.Buy ? Localizer["Buy"] : Localizer["Sell"])</td>
                     <td>@t.SecurityTicker</td>
                     <td>@t.AccountNumber</td>
                     <td>@t.Quantity</td>
@@ -47,7 +50,7 @@ else
                     <td>@t.Commission.ToString("F2")</td>
                     <td>@total.ToString("F2")</td>
                     <td>
-                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteTransaction(t.Id)">Delete</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteTransaction(t.Id)">@Localizer["Delete"]</button>
                     </td>
                 </tr>
             }
@@ -55,54 +58,26 @@ else
     </table>
 }
 
-<button class="btn btn-success mt-2" @onclick="NavigateToCreate">Add Transaction</button>
+<button class="btn btn-success mt-2" @onclick="NavigateToCreate">@Localizer["AddTransaction"]</button>
 
 @code {
     private List<TransactionDto>? transactions;
     private string? errorMessage;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadTransactions();
-    }
+    protected override async Task OnInitializedAsync() => await LoadTransactions();
 
     private async Task LoadTransactions()
     {
-        try
-        {
-            transactions = await Http.GetFromJsonAsync<List<TransactionDto>>("api/transactions") ?? new();
-            errorMessage = null;
-        }
-        catch (Exception ex)
-        {
-            transactions = new();
-            errorMessage = $"Error loading transactions: {ex.Message}";
-        }
+        try { transactions = await Http.GetFromJsonAsync<List<TransactionDto>>("api/transactions") ?? new(); errorMessage = null; }
+        catch (Exception ex) { transactions = new(); errorMessage = $"Error loading transactions: {ex.Message}"; }
     }
 
     private async Task DeleteTransaction(int id)
     {
-        try
-        {
-            var response = await Http.DeleteAsync($"api/transactions/{id}");
-            if (response.IsSuccessStatusCode)
-            {
-                await LoadTransactions();
-                StateHasChanged();
-            }
-            else
-            {
-                errorMessage = "Failed to delete transaction.";
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error: {ex.Message}";
-        }
+        var response = await Http.DeleteAsync($"api/transactions/{id}");
+        if (response.IsSuccessStatusCode) { await LoadTransactions(); StateHasChanged(); }
+        else errorMessage = "Delete failed";
     }
 
-    private void NavigateToCreate()
-    {
-        Navigation.NavigateTo("/transactions/add");
-    }
+    private void NavigateToCreate() => Navigation.NavigateTo("/transactions/add");
 }

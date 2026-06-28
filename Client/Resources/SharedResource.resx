@@ -1,17 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
-  <resheader name="resmimetype">
-    <value>text/microsoft-resx</value>
-  </resheader>
-  <resheader name="version">
-    <value>2.0</value>
-  </resheader>
-  <resheader name="reader">
-    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </resheader>
-  <resheader name="writer">
-    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </resheader>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <!-- Главная и меню -->
   <data name="Home" xml:space="preserve"><value>Главная</value></data>
   <data name="Brokers" xml:space="preserve"><value>Брокеры</value></data>
   <data name="Accounts" xml:space="preserve"><value>Счета</value></data>
@@ -33,4 +27,104 @@
   <data name="AdminUsers" xml:space="preserve"><value>Пользователи</value></data>
   <data name="Swagger" xml:space="preserve"><value>Swagger</value></data>
   <data name="ShowToken" xml:space="preserve"><value>Показать токен</value></data>
+  <data name="Loading" xml:space="preserve"><value>Загрузка...</value></data>
+  <data name="NoPositions" xml:space="preserve"><value>Нет позиций</value></data>
+  <data name="NoData" xml:space="preserve"><value>Нет данных</value></data>
+  <data name="NoHistory" xml:space="preserve"><value>Нет истории</value></data>
+  <data name="Today" xml:space="preserve"><value>Сегодня</value></data>
+  <data name="Date" xml:space="preserve"><value>Дата</value></data>
+  <data name="Price" xml:space="preserve"><value>Цена</value></data>
+  <data name="Change" xml:space="preserve"><value>Изм.</value></data>
+  <data name="Value" xml:space="preserve"><value>Стоимость</value></data>
+  <data name="Ticker" xml:space="preserve"><value>Тикер</value></data>
+  <data name="MoscowExchangeIndex" xml:space="preserve"><value>Индекс Мосбиржи</value></data>
+  <data name="Status" xml:space="preserve"><value>Статус</value></data>
+  <data name="Closing" xml:space="preserve"><value>Закрытие</value></data>
+  <data name="TopGainers" xml:space="preserve"><value>Лидеры роста</value></data>
+  <data name="TopLosers" xml:space="preserve"><value>Лидеры падения</value></data>
+  <data name="Admin" xml:space="preserve"><value>Администратор</value></data>
+
+  <!-- Брокеры -->
+  <data name="AddBroker" xml:space="preserve"><value>Добавить брокера</value></data>
+  <data name="BrokerName" xml:space="preserve"><value>Название</value></data>
+  <data name="SiteUrl" xml:space="preserve"><value>Сайт</value></data>
+  <data name="DefaultCommission" xml:space="preserve"><value>Комиссия по умолчанию, %</value></data>
+  <data name="Approved" xml:space="preserve"><value>Проверен</value></data>
+  <data name="Actions" xml:space="preserve"><value>Действия</value></data>
+  <data name="Edit" xml:space="preserve"><value>Ред.</value></data>
+  <data name="Delete" xml:space="preserve"><value>Удалить</value></data>
+  <data name="NewBroker" xml:space="preserve"><value>Новый брокер</value></data>
+  <data name="EditBroker" xml:space="preserve"><value>Редактировать брокера</value></data>
+  <data name="Save" xml:space="preserve"><value>Сохранить</value></data>
+  <data name="Cancel" xml:space="preserve"><value>Отмена</value></data>
+
+  <!-- Счета -->
+  <data name="MyAccounts" xml:space="preserve"><value>Мои счета</value></data>
+  <data name="AddAccount" xml:space="preserve"><value>Добавить счёт</value></data>
+  <data name="AccountNumber" xml:space="preserve"><value>Номер счёта</value></data>
+  <data name="Comment" xml:space="preserve"><value>Примечание</value></data>
+  <data name="Currency" xml:space="preserve"><value>Валюта</value></data>
+  <data name="CommissionRate" xml:space="preserve"><value>Комиссия, %</value></data>
+  <data name="NewAccount" xml:space="preserve"><value>Новый счёт</value></data>
+  <data name="EditAccount" xml:space="preserve"><value>Редактировать счёт</value></data>
+  <data name="SelectBroker" xml:space="preserve"><value>Выберите брокера...</value></data>
+  <data name="SelectCurrency" xml:space="preserve"><value>Выберите валюту...</value></data>
+
+  <!-- Бумаги -->
+  <data name="AddSecurity" xml:space="preserve"><value>Добавить бумагу</value></data>
+  <data name="SecurityName" xml:space="preserve"><value>Название</value></data>
+  <data name="ISIN" xml:space="preserve"><value>ISIN</value></data>
+  <data name="AssetType" xml:space="preserve"><value>Тип актива</value></data>
+  <data name="SelectAssetType" xml:space="preserve"><value>Выберите тип...</value></data>
+  <data name="TickerNotFound" xml:space="preserve"><value>Тикер не найден на MOEX.</value></data>
+  <data name="TickerRequired" xml:space="preserve"><value>Введите тикер</value></data>
+  <data name="SecurityNotFound" xml:space="preserve"><value>Бумага не найдена</value></data>
+  <data name="NewSecurity" xml:space="preserve"><value>Новая бумага</value></data>
+  <data name="SecurityInfoLoaded" xml:space="preserve"><value>Данные загружены с MOEX</value></data>
+
+  <!-- Сделки -->
+  <data name="MyTransactions" xml:space="preserve"><value>Мои сделки</value></data>
+  <data name="AddTransaction" xml:space="preserve"><value>Добавить сделку</value></data>
+  <data name="TransactionType" xml:space="preserve"><value>Тип</value></data>
+  <data name="Buy" xml:space="preserve"><value>Покупка</value></data>
+  <data name="Sell" xml:space="preserve"><value>Продажа</value></data>
+  <data name="SelectSecurity" xml:space="preserve"><value>Выберите бумагу...</value></data>
+  <data name="SelectAccount" xml:space="preserve"><value>Выберите счёт...</value></data>
+  <data name="Quantity" xml:space="preserve"><value>Кол-во</value></data>
+  <data name="PricePerShare" xml:space="preserve"><value>Цена за шт.</value></data>
+  <data name="Commission" xml:space="preserve"><value>Комиссия</value></data>
+  <data name="Total" xml:space="preserve"><value>Сумма</value></data>
+  <data name="NewTransaction" xml:space="preserve"><value>Новая сделка</value></data>
+
+  <!-- Портфель -->
+  <data name="MyPortfolio" xml:space="preserve"><value>Мой портфель</value></data>
+  <data name="AvgPrice" xml:space="preserve"><value>Средняя цена</value></data>
+  <data name="CurrentPrice" xml:space="preserve"><value>Текущая цена</value></data>
+  <data name="TotalCost" xml:space="preserve"><value>Общая стоимость</value></data>
+  <data name="MarketValue" xml:space="preserve"><value>Рыночная стоимость</value></data>
+  <data name="PL" xml:space="preserve"><value>P&amp;L</value></data>
+  <data name="ErrorLoadingPortfolio" xml:space="preserve"><value>Ошибка загрузки портфеля</value></data>
+
+  <!-- Аналитика -->
+  <data name="PortfolioAnalytics" xml:space="preserve"><value>Аналитика портфеля</value></data>
+  <data name="TopPositionsTable" xml:space="preserve"><value>Топ позиций</value></data>
+  <data name="AllocationTitle" xml:space="preserve"><value>Распределение</value></data>
+
+  <!-- Логин / Регистрация -->
+  <data name="Email" xml:space="preserve"><value>Email</value></data>
+  <data name="Password" xml:space="preserve"><value>Пароль</value></data>
+  <data name="FullName" xml:space="preserve"><value>Полное имя</value></data>
+  <data name="ConfirmPassword" xml:space="preserve"><value>Подтвердите пароль</value></data>
+  <data name="RegisterNow" xml:space="preserve"><value>Зарегистрироваться</value></data>
+  <data name="LoginNow" xml:space="preserve"><value>Войти</value></data>
+  <data name="ErrorLogin" xml:space="preserve"><value>Ошибка входа</value></data>
+  <data name="ErrorRegister" xml:space="preserve"><value>Ошибка регистрации</value></data>
+  <data name="LoadFromMOEX" xml:space="preserve"><value>Загрузить из MOEX</value></data>
+  <data name="TickerNotFound" xml:space="preserve"><value>Тикер не найден на MOEX.</value></data>
+  <data name="TickerRequired" xml:space="preserve"><value>Введите корректный тикер</value></data>
+  <data name="SecurityNotFound" xml:space="preserve"><value>Ошибка сохранения бумаги</value></data>
+  <data name="SelectAssetType" xml:space="preserve"><value>Выберите тип актива</value></data>
+  <data name="NewSecurity" xml:space="preserve"><value>Новая бумага</value></data>
+  <data name="NoTransactions" xml:space="preserve"><value>Нет сделок</value></data>
+  
 </root>

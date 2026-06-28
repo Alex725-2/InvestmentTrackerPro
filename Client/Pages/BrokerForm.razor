@@ -1,80 +1,56 @@
 ﻿@page "/brokers/add"
 @page "/brokers/edit/{Id:int}"
 @using InvestmentTracker.Shared.Models
+@using Microsoft.Extensions.Localization
+@using InvestmentTracker.Client.Resources
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> Localizer
 
-<h3>@Title</h3>
+<h3>@(Id == 0 ? Localizer["NewBroker"] : Localizer["EditBroker"])</h3>
 
 <EditForm Model="broker" OnValidSubmit="HandleSubmit">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
     <div class="form-group">
-        <label>Name</label>
+        <label>@Localizer["BrokerName"]</label>
         <InputText @bind-Value="broker.Name" class="form-control" />
         <ValidationMessage For="@(() => broker.Name)" />
     </div>
     <div class="form-group">
-        <label>Site URL</label>
+        <label>@Localizer["SiteUrl"]</label>
         <InputText @bind-Value="broker.SiteUrl" class="form-control" />
     </div>
     <div class="form-group">
-        <label>Default Commission, %</label>
+        <label>@Localizer["DefaultCommission"]</label>
         <InputNumber @bind-Value="broker.DefaultCommissionRate" class="form-control" />
     </div>
 
-    <div class="mt-2">
-        <button type="submit" class="btn btn-primary">Save</button>
-    </div>
-    <div class="mt-2">
-        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
-    </div>
+    <button type="submit" class="btn btn-primary">@Localizer["Save"]</button>
+    <button type="button" class="btn btn-secondary ms-2" @onclick="Cancel">@Localizer["Cancel"]</button>
 </EditForm>
 
 @code {
-    [Parameter]
-    public int Id { get; set; }
-
+    [Parameter] public int Id { get; set; }
     private BrokerDto broker = new();
-    private string Title => Id == 0 ? "New Broker" : "Edit Broker";
 
     protected override async Task OnInitializedAsync()
     {
         if (Id != 0)
         {
             var existing = await Http.GetFromJsonAsync<BrokerDto>($"api/brokers/{Id}");
-            if (existing != null)
-            {
-                broker = existing;
-            }
+            if (existing != null) broker = existing;
         }
     }
 
     private async Task HandleSubmit()
     {
         HttpResponseMessage response;
-        if (Id == 0)
-        {
-            response = await Http.PostAsJsonAsync("api/brokers", broker);
-        }
-        else
-        {
-            response = await Http.PutAsJsonAsync($"api/brokers/{Id}", broker);
-        }
-
-        if (response.IsSuccessStatusCode)
-        {
-            Navigation.NavigateTo("/brokers");
-        }
-        else
-        {
-            // обработка ошибок
-        }
+        if (Id == 0) response = await Http.PostAsJsonAsync("api/brokers", broker);
+        else response = await Http.PutAsJsonAsync($"api/brokers/{Id}", broker);
+        if (response.IsSuccessStatusCode) Navigation.NavigateTo("/brokers");
     }
 
-    private void Cancel()
-    {
-        Navigation.NavigateTo("/brokers");
-    }
+    private void Cancel() => Navigation.NavigateTo("/brokers");
 }

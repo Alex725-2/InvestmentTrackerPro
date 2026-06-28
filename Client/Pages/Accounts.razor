@@ -1,25 +1,32 @@
 ﻿@page "/accounts"
 @using InvestmentTracker.Shared.Models
+@using Microsoft.Extensions.Localization
+@using InvestmentTracker.Client.Resources
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> Localizer
 
-<h3>My Accounts</h3>
+<h3>@Localizer["MyAccounts"]</h3>
 
 @if (accounts == null)
 {
-    <p>Loading...</p>
+    <p>@Localizer["Loading"]</p>
+}
+else if (errorMessage != null)
+{
+    <div class="alert alert-danger">@errorMessage</div>
 }
 else
 {
     <table class="table table-striped">
         <thead>
             <tr>
-                <th>Broker</th>
-                <th>Account Number</th>
-                <th>Comment</th>
-                <th>Currency</th>
-                <th>Commission, %</th>
-                <th>Actions</th>
+                <th>@Localizer["Brokers"]</th>
+                <th>@Localizer["AccountNumber"]</th>
+                <th>@Localizer["Comment"]</th>
+                <th>@Localizer["Currency"]</th>
+                <th>@Localizer["CommissionRate"]</th>
+                <th>@Localizer["Actions"]</th>
             </tr>
         </thead>
         <tbody>
@@ -32,8 +39,8 @@ else
                     <td>@acc.CurrencyCode</td>
                     <td>@acc.CommissionRate.ToString("F2")</td>
                     <td>
-                        <button class="btn btn-sm btn-primary" @onclick="() => NavigateToEdit(acc.Id)">Edit</button>
-                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteAccount(acc.Id)">Delete</button>
+                        <button class="btn btn-sm btn-primary" @onclick="() => NavigateToEdit(acc.Id)">@Localizer["Edit"]</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteAccount(acc.Id)">@Localizer["Delete"]</button>
                     </td>
                 </tr>
             }
@@ -41,24 +48,18 @@ else
     </table>
 }
 
-<button class="btn btn-success" @onclick="NavigateToCreate">Add Account</button>
+<button class="btn btn-success mt-2" @onclick="NavigateToCreate">@Localizer["AddAccount"]</button>
 
 @code {
     private List<AccountDto>? accounts;
     private string? errorMessage;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync() => await LoadAccounts();
+
+    private async Task LoadAccounts()
     {
-        try
-        {
-        accounts = await Http.GetFromJsonAsync<List<AccountDto>>("api/accounts");
-            errorMessage = null;
-        }
-        catch (Exception ex)
-        {
-            accounts = new List<AccountDto>();
-            errorMessage = $"Failed to load accounts: {ex.Message}";
-        }
+        try { accounts = await Http.GetFromJsonAsync<List<AccountDto>>("api/accounts") ?? new(); errorMessage = null; }
+        catch (Exception ex) { accounts = new(); errorMessage = $"Failed to load accounts: {ex.Message}"; }
     }
 
     private void NavigateToCreate() => Navigation.NavigateTo("/accounts/add");
@@ -67,10 +68,7 @@ else
     private async Task DeleteAccount(int id)
     {
         var response = await Http.DeleteAsync($"api/accounts/{id}");
-        if (response.IsSuccessStatusCode)
-        {
-            accounts = await Http.GetFromJsonAsync<List<AccountDto>>("api/accounts");
-            StateHasChanged();
-        }
+        if (response.IsSuccessStatusCode) { await LoadAccounts(); StateHasChanged(); }
+        else errorMessage = "Delete failed";
     }
 }

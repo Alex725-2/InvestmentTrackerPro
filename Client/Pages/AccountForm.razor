@@ -1,42 +1,43 @@
 ﻿@page "/accounts/add"
 @page "/accounts/edit/{Id:int}"
 @using InvestmentTracker.Shared.Models
+@using Microsoft.Extensions.Localization
+@using InvestmentTracker.Client.Resources
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> Localizer
 
-<h3>@Title</h3>
+<h3>@(Id == 0 ? Localizer["NewAccount"] : Localizer["EditAccount"])</h3>
 
 <EditForm Model="account" OnValidSubmit="HandleSubmit">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
     <div class="form-group">
-        <label>Broker</label>
-        <InputSelect @bind-Value="account.BrokerId" class="form-control" @bind-Value:after="OnBrokerChanged">
-            <option value="">Select broker...</option>
+        <label>@Localizer["Brokers"]</label>
+        <InputSelect @bind-Value="account.BrokerId" class="form-control">
+            <option value="">@Localizer["SelectBroker"]</option>
             @foreach (var broker in brokers)
             {
                 <option value="@broker.Id">@broker.Name</option>
             }
         </InputSelect>
-        <ValidationMessage For="@(() => account.BrokerId)" />
     </div>
 
     <div class="form-group">
-        <label>Account Number</label>
+        <label>@Localizer["AccountNumber"]</label>
         <InputText @bind-Value="account.AccountNumber" class="form-control" />
-        <ValidationMessage For="@(() => account.AccountNumber)" />
     </div>
 
     <div class="form-group">
-        <label>Comment</label>
+        <label>@Localizer["Comment"]</label>
         <InputText @bind-Value="account.Comment" class="form-control" />
     </div>
 
     <div class="form-group">
-        <label>Currency</label>
+        <label>@Localizer["Currency"]</label>
         <InputSelect @bind-Value="account.CurrencyId" class="form-control">
-            <option value="">Select currency...</option>
+            <option value="">@Localizer["SelectCurrency"]</option>
             @foreach (var currency in currencies)
             {
                 <option value="@currency.Id">@currency.Code</option>
@@ -45,12 +46,12 @@
     </div>
 
     <div class="form-group">
-        <label>Commission Rate, %</label>
+        <label>@Localizer["CommissionRate"]</label>
         <InputNumber @bind-Value="account.CommissionRate" class="form-control" />
     </div>
 
-    <button type="submit" class="btn btn-primary">Save</button>
-    <button type="button" class="btn btn-secondary ms-2" @onclick="Cancel">Cancel</button>
+    <button type="submit" class="btn btn-primary">@Localizer["Save"]</button>
+    <button type="button" class="btn btn-secondary ms-2" @onclick="Cancel">@Localizer["Cancel"]</button>
 </EditForm>
 
 @if (!string.IsNullOrEmpty(errorMessage))
@@ -59,15 +60,11 @@
 }
 
 @code {
-    [Parameter]
-    public int Id { get; set; }
-
+    [Parameter] public int Id { get; set; }
     private AccountDto account = new();
     private List<BrokerDto>? brokers;
     private List<CurrencyDto>? currencies;
     private string? errorMessage;
-
-    private string Title => Id == 0 ? "New Account" : "Edit Account";
 
     protected override async Task OnInitializedAsync()
     {
@@ -76,52 +73,13 @@
             brokers = await Http.GetFromJsonAsync<List<BrokerDto>>("api/brokers") ?? new();
             currencies = await Http.GetFromJsonAsync<List<CurrencyDto>>("api/currencies") ?? new();
         }
-        catch
-        {
-            brokers = new();
-            currencies = new();
-        }
+        catch { brokers = new(); currencies = new(); }
 
-        if (Id == 0)
+        if (Id != 0)
         {
-            // Новый счёт: валюта по умолчанию RUR
-            var defaultCurrency = currencies?.FirstOrDefault(c => c.Code == "RUR");
-            if (defaultCurrency != null)
-                account.CurrencyId = defaultCurrency.Id;
+            var existing = await Http.GetFromJsonAsync<AccountDto>($"api/accounts/{Id}");
+            if (existing != null) account = existing;
         }
-        else
-        {
-            // Редактирование: загружаем существующий счёт
-            try
-            {
-                var existing = await Http.GetFromJsonAsync<AccountDto>($"api/accounts/{Id}");
-                if (existing != null)
-                {
-                    account = existing;
-                }
-            }
-            catch
-            {
-                errorMessage = "Failed to load account.";
-            }
-        }
-    }
-
-    private void OnBrokerChanged()
-    {
-        var broker = brokers?.FirstOrDefault(b => b.Id == account.BrokerId);
-        if (broker != null)
-        {
-            account.CommissionRate = broker.DefaultCommissionRate;
-        }
-        // Если валюта не выбрана, ставим RUR
-        if (account.CurrencyId == 0)
-        {
-            var defaultCurrency = currencies?.FirstOrDefault(c => c.Code == "RUR");
-            if (defaultCurrency != null)
-                account.CurrencyId = defaultCurrency.Id;
-        }
-        StateHasChanged();
     }
 
     private async Task HandleSubmit()
@@ -129,25 +87,11 @@
         try
         {
             HttpResponseMessage response;
-            if (Id == 0)
-                response = await Http.PostAsJsonAsync("api/accounts", account);
-            else
-                response = await Http.PutAsJsonAsync($"api/accounts/{Id}", account);
-
-            if (response.IsSuccessStatusCode)
-            {
-                Navigation.NavigateTo("/accounts");
-            }
-            else
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                errorMessage = $"Error: {errorContent}";
-            }
+            if (Id == 0) response = await Http.PostAsJsonAsync("api/accounts", account);
+            else response = await Http.PutAsJsonAsync($"api/accounts/{Id}", account);
+            if (response.IsSuccessStatusCode) Navigation.NavigateTo("/accounts");
         }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error: {ex.Message}";
-        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
     }
 
     private void Cancel() => Navigation.NavigateTo("/accounts");

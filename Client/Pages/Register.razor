@@ -1,30 +1,33 @@
 ﻿@page "/register"
-@using InvestmentTracker.Client.Services
 @using InvestmentTracker.Shared.Models
+@using InvestmentTracker.Client.Services
+@using Microsoft.Extensions.Localization
+@using InvestmentTracker.Client.Resources
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> Localizer
 
-<h3>Register</h3>
+<h3>@Localizer["RegisterNow"]</h3>
 
 <EditForm Model="@registerModel" OnValidSubmit="@HandleRegister">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
     <div class="form-group">
-        <label>Email</label>
+        <label>@Localizer["Email"]</label>
         <InputText @bind-Value="registerModel.Email" class="form-control" />
         <ValidationMessage For="@(() => registerModel.Email)" />
     </div>
     <div class="form-group">
-        <label>Password</label>
+        <label>@Localizer["Password"]</label>
         <InputText type="password" @bind-Value="registerModel.Password" class="form-control" />
         <ValidationMessage For="@(() => registerModel.Password)" />
     </div>
     <div class="form-group">
-        <label>Full Name</label>
+        <label>@Localizer["FullName"]</label>
         <InputText @bind-Value="registerModel.FullName" class="form-control" />
     </div>
-    <button type="submit" class="btn btn-primary">Register</button>
+    <button type="submit" class="btn btn-primary">@Localizer["RegisterNow"]</button>
 </EditForm>
 
 @if (!string.IsNullOrEmpty(message))
@@ -41,10 +44,7 @@
     {
         var result = await AuthService.Register(registerModel);
         isSuccess = result.IsSuccess;
-        message = result.Message;
-        if (result.IsSuccess)
-        {
-            Navigation.NavigateTo("/");
-        }
+        message = isSuccess ? "" : result.Message;
+        if (isSuccess) Navigation.NavigateTo("/");
     }
 }

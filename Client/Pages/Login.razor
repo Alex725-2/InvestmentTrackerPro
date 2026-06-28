@@ -1,26 +1,29 @@
 ﻿@page "/login"
-@using InvestmentTracker.Client.Services
 @using InvestmentTracker.Shared.Models
+@using InvestmentTracker.Client.Services
+@using Microsoft.Extensions.Localization
+@using InvestmentTracker.Client.Resources
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> Localizer
 
-<h3>Login</h3>
+<h3>@Localizer["LoginNow"]</h3>
 
 <EditForm Model="@loginModel" OnValidSubmit="@HandleLogin">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
     <div class="form-group">
-        <label>Email</label>
+        <label>@Localizer["Email"]</label>
         <InputText @bind-Value="loginModel.Email" class="form-control" />
         <ValidationMessage For="@(() => loginModel.Email)" />
     </div>
     <div class="form-group">
-        <label>Password</label>
+        <label>@Localizer["Password"]</label>
         <InputText type="password" @bind-Value="loginModel.Password" class="form-control" />
         <ValidationMessage For="@(() => loginModel.Password)" />
     </div>
-    <button type="submit" class="btn btn-primary">Login</button>
+    <button type="submit" class="btn btn-primary">@Localizer["LoginNow"]</button>
 </EditForm>
 
 @if (!string.IsNullOrEmpty(message))
@@ -37,10 +40,7 @@
     {
         var result = await AuthService.Login(loginModel);
         isSuccess = result.IsSuccess;
-        message = result.Message;
-        if (result.IsSuccess)
-        {
-            Navigation.NavigateTo("/");
-        }
+        message = isSuccess ? "" : result.Message;
+        if (isSuccess) Navigation.NavigateTo("/");
     }
 }
