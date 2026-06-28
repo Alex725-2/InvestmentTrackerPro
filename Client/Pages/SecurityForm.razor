@@ -1,16 +1,19 @@
 ﻿@page "/securities/add"
 @using InvestmentTracker.Shared.Models
+@using Microsoft.Extensions.Localization
+@using InvestmentTracker.Client.Resources
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> Localizer
 
-<h3>New Security</h3>
+<h3>@Localizer["NewSecurity"]</h3>
 
 <EditForm Model="security" OnValidSubmit="HandleSubmit">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
     <div class="form-group">
-        <label>Ticker</label>
+        <label>@Localizer["Ticker"]</label>
         <InputText @bind-Value="security.Ticker" class="form-control" @onblur="LookupSecurity" />
         <ValidationMessage For="@(() => security.Ticker)" />
         @if (!string.IsNullOrEmpty(lookupError))
@@ -20,18 +23,18 @@
     </div>
 
     <div class="form-group">
-        <label>ISIN (optional)</label>
+        <label>@Localizer["ISIN"]</label>
         <InputText @bind-Value="security.Isin" class="form-control" />
     </div>
     <div class="form-group">
-        <label>Name</label>
+        <label>@Localizer["SecurityName"]</label>
         <InputText @bind-Value="security.Name" class="form-control" />
         <ValidationMessage For="@(() => security.Name)" />
     </div>
     <div class="form-group">
-        <label>Asset Type</label>
+        <label>@Localizer["AssetType"]</label>
         <InputSelect @bind-Value="security.AssetTypeId" class="form-control">
-            <option value="">Select type...</option>
+            <option value="">@Localizer["SelectAssetType"]</option>
             @foreach (var type in assetTypes)
             {
                 <option value="@type.Id">@type.Name</option>
@@ -39,8 +42,8 @@
         </InputSelect>
         <ValidationMessage For="@(() => security.AssetTypeId)" />
     </div>
-    <button type="submit" class="btn btn-primary" disabled="@(isTickerValid != true)">Save</button>
-    <button type="button" class="btn btn-secondary ms-2" @onclick="Cancel">Cancel</button>
+    <button type="submit" class="btn btn-primary" disabled="@(isTickerValid != true)">@Localizer["Save"]</button>
+    <button type="button" class="btn btn-secondary ms-2" @onclick="Cancel">@Localizer["Cancel"]</button>
 </EditForm>
 
 @if (!string.IsNullOrEmpty(errorMessage))
@@ -53,7 +56,7 @@
     private List<AssetTypeDto>? assetTypes;
     private string? lookupError;
     private string? errorMessage;
-    private bool? isTickerValid; // null - еще не проверяли, true - ок, false - ошибка
+    private bool? isTickerValid;
 
     protected override async Task OnInitializedAsync()
     {
@@ -63,7 +66,7 @@
         }
         catch (Exception ex)
         {
-            errorMessage = $"Failed to load asset types: {ex.Message}";
+            errorMessage = $"Ошибка загрузки типов активов: {ex.Message}";
             assetTypes = new();
         }
     }
@@ -77,7 +80,6 @@
             return;
         }
 
-        // Нормализуем тикер: большие буквы, без пробелов
         security.Ticker = security.Ticker.Trim().ToUpperInvariant();
 
         lookupError = null;
@@ -96,9 +98,8 @@
             }
             else
             {
-                lookupError = "Security not found on MOEX.";
+                lookupError = Localizer["TickerNotFound"];
                 isTickerValid = false;
-                // Очищаем поля, чтобы не сохранить невалидные данные
                 security.Isin = null;
                 security.Name = string.Empty;
                 security.AssetTypeId = 0;
@@ -106,7 +107,7 @@
         }
         catch (HttpRequestException)
         {
-            lookupError = "Failed to communicate with MOEX service.";
+            lookupError = Localizer["TickerNotFound"];
             isTickerValid = false;
             security.Isin = null;
             security.Name = string.Empty;
@@ -116,16 +117,15 @@
 
     private async Task HandleSubmit()
     {
-        // Проверяем, что тикер был проверен и валиден
         if (isTickerValid != true)
         {
-            errorMessage = "Please enter a valid ticker and verify it first.";
+            errorMessage = Localizer["TickerRequired"];
             return;
         }
 
         if (security.AssetTypeId == 0)
         {
-            errorMessage = "Asset type is required.";
+            errorMessage = Localizer["SelectAssetType"];
             return;
         }
 
@@ -138,12 +138,12 @@
             }
             else
             {
-                errorMessage = "Failed to create security.";
+                errorMessage = Localizer["SecurityNotFound"];
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error: {ex.Message}";
+            errorMessage = $"Ошибка: {ex.Message}";
         }
     }
 

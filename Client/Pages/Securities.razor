@@ -1,13 +1,16 @@
 ﻿@page "/securities"
 @using InvestmentTracker.Shared.Models
+@using Microsoft.Extensions.Localization
+@using InvestmentTracker.Client.Resources
 @inject HttpClient Http
 @inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> Localizer
 
-<h3>Securities (Tickers)</h3>
+<h3>@Localizer["Securities"]</h3>
 
 @if (securities == null)
 {
-    <p>Loading...</p>
+    <p>@Localizer["Loading"]</p>
 }
 else if (errorMessage != null)
 {
@@ -18,11 +21,11 @@ else
     <table class="table table-striped">
         <thead>
             <tr>
-                <th>Ticker</th>
-                <th>ISIN</th>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Actions</th>
+                <th>@Localizer["Ticker"]</th>
+                <th>@Localizer["ISIN"]</th>
+                <th>@Localizer["SecurityName"]</th>
+                <th>@Localizer["AssetType"]</th>
+                <th>@Localizer["Actions"]</th>
             </tr>
         </thead>
         <tbody>
@@ -34,7 +37,7 @@ else
                     <td>@sec.Name</td>
                     <td>@sec.AssetTypeName</td>
                     <td>
-                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteSecurity(sec.Id)">Delete</button>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteSecurity(sec.Id)">@Localizer["Delete"]</button>
                     </td>
                 </tr>
             }
@@ -42,7 +45,7 @@ else
     </table>
 }
 
-<button class="btn btn-success mt-2" @onclick="NavigateToCreate">Add Security</button>
+<button class="btn btn-success mt-2" @onclick="NavigateToCreate">@Localizer["AddSecurity"]</button>
 
 @code {
     private List<SecurityDto>? securities;
@@ -63,7 +66,7 @@ else
         catch (Exception ex)
         {
             securities = new();
-            errorMessage = $"Failed to load securities: {ex.Message}";
+            errorMessage = $"Ошибка загрузки: {ex.Message}";
         }
     }
 
@@ -82,12 +85,12 @@ else
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                errorMessage = $"Delete failed: {errorContent}";
+                errorMessage = $"Ошибка удаления: {errorContent}";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error: {ex.Message}";
+            errorMessage = $"Ошибка: {ex.Message}";
         }
     }
 }
