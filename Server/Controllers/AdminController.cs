@@ -1,4 +1,5 @@
 ﻿using InvestmentTracker.Server.Models;
+using InvestmentTracker.Server.Services;
 using InvestmentTracker.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -12,10 +13,12 @@ namespace InvestmentTracker.Server.Controllers
     public class AdminController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SecuritiesSyncService _securitiesSyncService;
 
-        public AdminController(UserManager<ApplicationUser> userManager)
+        public AdminController(UserManager<ApplicationUser> userManager, SecuritiesSyncService securitiesSyncService)
         {
             _userManager = userManager;
+            _securitiesSyncService = securitiesSyncService;
         }
 
         [HttpGet("users")]
@@ -31,6 +34,14 @@ namespace InvestmentTracker.Server.Controllers
             }).ToListAsync();
 
             return Ok(users);
+        }
+
+        [HttpGet("sync-securities")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> SyncSecurities()
+        {
+            await _securitiesSyncService.SyncSecuritiesAsync();
+            return Ok("Sync completed");
         }
     }
 }

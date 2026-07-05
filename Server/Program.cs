@@ -127,7 +127,7 @@ builder.Services.AddScoped<QuoteUpdateService>();
 // Фоновое обновление котировок (вместо Hangfire для Production)
 builder.Services.AddHostedService<QuoteBackgroundService>();
 
-
+builder.Services.AddHostedService<SecuritiesSyncService>();
 builder.Services.AddHostedService<DividendUpdateService>();
 var app = builder.Build();
 

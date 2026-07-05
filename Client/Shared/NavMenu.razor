@@ -43,11 +43,7 @@
                     <span class="oi oi-dollar"></span> @Localizer["Accounts"]
                 </NavLink>
             </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="securities">
-                    <span class="oi oi-list"></span> @Localizer["Securities"]
-                </NavLink>
-            </div>
+          
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="transactions">
                     <span class="oi oi-transfer"></span> @Localizer["Transactions"]
@@ -63,7 +59,6 @@
                     <span class="oi oi-pie-chart"></span> @Localizer["Analytics"]
                 </NavLink>
             </div>
-          
         }
         else
         {
@@ -78,17 +73,7 @@
                 </NavLink>
             </div>
         }
-     <!--   <div class="nav-item px-3">
-            <NavLink class="nav-link" href="about">
-                <span class="oi oi-info"></span> @Localizer["About"]
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="help">
-                <span class="oi oi-question-mark"></span> @Localizer["Help"]
-            </NavLink>
-        </div>
-        -->
+
         @if (isLoggedIn)
         {
             <div class="nav-item px-3 mt-3">
@@ -96,6 +81,20 @@
                     <span class="oi oi-account-logout"></span> @Localizer["Logout"]
                 </button>
             </div>
+
+            @if (isAdmin)
+            {
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="securities">
+                        <span class="oi oi-list"></span> @Localizer["Securities"]
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="admin/users">
+                        <span class="oi oi-list"></span> Пользователи
+                    </NavLink>
+                </div>
+            }
         }
     </nav>
 </div>
@@ -103,6 +102,7 @@
 @code {
     private bool collapseNavMenu = true;
     private bool isLoggedIn;
+    private bool isAdmin;
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
     protected override async Task OnInitializedAsync()
@@ -114,6 +114,16 @@
     private async Task UpdateAuthState()
     {
         isLoggedIn = await AuthService.IsLoggedIn();
+        if (isLoggedIn)
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            isAdmin = user.IsInRole("Admin");
+        }
+        else
+        {
+            isAdmin = false;
+        }
         StateHasChanged();
     }
 

@@ -9,7 +9,6 @@ namespace InvestmentTracker.Server.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class SecuritiesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -20,6 +19,7 @@ namespace InvestmentTracker.Server.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]   // гости и все могут видеть список бумаг
         public async Task<ActionResult<List<SecurityDto>>> GetAll()
         {
             var securities = await _context.Securities
@@ -39,6 +39,7 @@ namespace InvestmentTracker.Server.Controllers
         }
 
         [HttpGet("{id}")]
+        [AllowAnonymous]
         public async Task<ActionResult<SecurityDto>> GetById(int id)
         {
             var security = await _context.Securities
@@ -59,6 +60,7 @@ namespace InvestmentTracker.Server.Controllers
         }
 
         [HttpGet("lookup")]
+        [AllowAnonymous]   // поиск тикера нужен всем
         public async Task<ActionResult<SecurityDto?>> Lookup([FromQuery] string? ticker)
         {
             if (string.IsNullOrWhiteSpace(ticker))
@@ -80,6 +82,7 @@ namespace InvestmentTracker.Server.Controllers
         }
 
         [HttpGet("{id}/price")]
+        [AllowAnonymous]   // получение текущей цены нужно всем
         public async Task<ActionResult<decimal?>> GetCurrentPrice(int id)
         {
             var security = await _context.Securities.FindAsync(id);
@@ -111,12 +114,11 @@ namespace InvestmentTracker.Server.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]   // только админ может добавить бумагу
         public async Task<ActionResult<SecurityDto>> Create(SecurityDto dto)
         {
-            // Нормализуем тикер
             dto.Ticker = dto.Ticker.Trim().ToUpperInvariant();
 
-            // Проверка на дубликат
             var existing = await _context.Securities
                 .FirstOrDefaultAsync(s => s.Ticker == dto.Ticker);
             if (existing != null)
@@ -142,12 +144,12 @@ namespace InvestmentTracker.Server.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]   // только админ может удалять
         public async Task<IActionResult> Delete(int id)
         {
             var security = await _context.Securities.FindAsync(id);
             if (security == null) return NotFound();
 
-            // Проверяем, не используется ли в сделках или портфеле
             var inUse = await _context.Transactions.AnyAsync(t => t.SecurityId == id)
                      || await _context.PortfolioItems.AnyAsync(p => p.SecurityId == id);
             if (inUse)
