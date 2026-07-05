@@ -1,4 +1,5 @@
-﻿using InvestmentTracker.Server.Data;
+﻿// File: PaymentsController.cs (full code)
+using InvestmentTracker.Server.Data;
 using InvestmentTracker.Server.Models;
 using InvestmentTracker.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -23,15 +24,26 @@ namespace InvestmentTracker.Server.Controllers
         [AllowAnonymous]
         public async Task<ActionResult<List<PaymentEventDto>>> GetUpcoming(
             [FromQuery] bool myOnly = false,
-            [FromQuery] int count = 50)   // увеличим count для просмотра
+            [FromQuery] int count = 500,
+            [FromQuery] int? year = null,
+            [FromQuery] int? month = null)
         {
-            var query = _context.PaymentEvents
-                .Where(p => p.Date >= DateTime.UtcNow.Date.AddYears(-1))  // <-- за последний год
-                .OrderByDescending(p => p.Date)  // покажем последние
-                .AsQueryable();
+            var query = _context.PaymentEvents.AsQueryable();
 
+            if (year.HasValue && month.HasValue)
+            {
+                var from = new DateTime(year.Value, month.Value, 1);
+                var to = from.AddMonths(1);
+                query = query.Where(p => p.Date >= from && p.Date < to);
+            }
+            else
+            {
+                // Если месяц не указан, возвращаем последний год, чтобы календарь мог найти ближайший месяц с данными
+                var from = DateTime.UtcNow.Date.AddYears(-1);
+                query = query.Where(p => p.Date >= from);
+            }
 
-        string? userId = null;
+            string? userId = null;
             if (myOnly && User.Identity?.IsAuthenticated == true)
                 userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -83,7 +95,6 @@ namespace InvestmentTracker.Server.Controllers
 
             return Ok(events);
         }
-
 
         [HttpGet("force-update")]
         [AllowAnonymous]

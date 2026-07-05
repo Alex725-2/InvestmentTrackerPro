@@ -1,0 +1,63 @@
+﻿@using InvestmentTracker.Shared.Models
+@using InvestmentTracker.Client.Resources
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<SharedResource> Localizer
+
+<td class="calendar-cell @(IsCurrentMonth ? "" : "other-month") @BgClass"
+    title="@Tooltip">
+    <div class="event-block @EventColorClass">
+        <span class="cell-date">@Day</span>
+        @if (HasPayment)
+        {
+            <div class="cell-tickers">
+                @{
+                    var shownTickers = Events.Take(3).ToList();
+                    var hiddenCount = Events.Count - 3;
+                }
+                @foreach (var evt in shownTickers)
+                {
+                    <span class="ticker-badge">@evt.Ticker</span>
+                }
+                @if (hiddenCount > 0)
+                {
+                    <span class="ticker-more">+@hiddenCount</span>
+                }
+            </div>
+        }
+    </div>
+</td>
+
+@code {
+    [Parameter] public int Day { get; set; }
+    [Parameter] public bool IsCurrentMonth { get; set; }
+    [Parameter] public List<PaymentEventDto> Events { get; set; } = new();
+
+    private bool HasPayment => Events.Any();
+    private int EventCount => Events.Count;
+
+    // Фоновый класс для всей ячейки (только для пустых дней)
+    private string BgClass => HasPayment ? "" : "empty-day";
+
+    // Класс цветного блока
+    private string EventColorClass => HasPayment
+        ? Events.First().Type switch
+        {
+            "Dividend" => "dividend-block",
+            "Coupon" => "coupon-block",
+            "Amortization" => "amortization-block",
+            _ => "dividend-block"
+        }
+        : "";
+
+    private string Tooltip => HasPayment
+        ? string.Join("\n", Events.Select(e => $"{e.Ticker}: {e.AmountPerUnit:F2} {e.Currency} ({GetLocalizedType(e.Type)})"))
+        : "";
+
+    private string GetLocalizedType(string type) => type switch
+    {
+        "Dividend" => "Дивиденд",
+        "Coupon" => "Купон",
+        "Amortization" => "Амортизация",
+        _ => type
+    };
+}

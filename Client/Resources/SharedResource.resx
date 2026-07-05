@@ -138,5 +138,10 @@
 
 <data name="GuestMessage" xml:space="preserve"><value>Зарегистрируйтесь, чтобы загрузить свой портфель и видеть персональные суммы</value></data>
 
+<data name="PaymentHistory" xml:space="preserve"><value>История выплат</value></data>
+<data name="TotalPayments" xml:space="preserve"><value>Всего выплат</value></data>
+<data name="Paid" xml:space="preserve"><value>Уже выплачено</value></data>
+<data name="Upcoming" xml:space="preserve"><value>Еще будет выплачено</value></data>
+
   
 </root>

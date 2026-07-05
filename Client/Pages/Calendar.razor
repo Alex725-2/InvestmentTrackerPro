@@ -7,13 +7,107 @@
 @inject IStringLocalizer<SharedResource> Localizer
 @inject AuthenticationStateProvider AuthStateProvider
 
+<style>
+    /* Календарная сетка */
+    .calendar-grid {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 4px; /* воздух между ячейками */
+        border: none;
+        background: transparent;
+    }
+
+        /* Заголовки дней недели — теперь на тон темнее */
+        .calendar-grid thead th {
+            background: #e0e0e0;
+            border-radius: 8px;
+            padding: 8px 0;
+            font-weight: 600;
+            color: #555;
+            border: none !important;
+            text-align: center;
+        }
+
+    /* Ячейка календаря */
+    .calendar-cell {
+        vertical-align: top;
+        height: 80px;
+        padding: 0;
+        border: none !important;
+        border-radius: 10px;
+        background: transparent;
+    }
+
+    /* Пустая ячейка — остаётся как есть */
+    .empty-day {
+        background-color: #f2f2f2;
+    }
+
+    /* Цветной блок внутри ячейки */
+    .event-block {
+        height: 100%;
+        border-radius: 10px;
+        padding: 4px 6px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .dividend-block {
+        background: #d4edda;
+    }
+
+    .coupon-block {
+        background: #cce5ff;
+    }
+
+    .amortization-block {
+        background: #fff3cd;
+    }
+
+    .cell-date {
+        font-size: 1.4rem;
+        font-weight: 600;
+        line-height: 1;
+        color: #222;
+    }
+
+    .cell-tickers {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        margin-top: auto;
+    }
+
+    .ticker-badge {
+        font-size: 0.6rem;
+        font-weight: 500;
+        background: rgba(255,255,255,0.7);
+        padding: 1px 4px;
+        border-radius: 4px;
+        color: #333;
+    }
+
+    .ticker-more {
+        font-size: 0.6rem;
+        font-weight: 600;
+        color: #555;
+        margin-left: 2px;
+        align-self: center;
+    }
+
+    .other-month .event-block {
+        opacity: 0.5;
+    }
+</style>
+
 <h3>@Localizer["Calendar"]</h3>
 
 @if (isAuthenticated)
 {
     <div class="mb-3">
         <button class="btn btn-outline-primary @(myOnly ? "active" : "")" @onclick="ToggleMyOnly">
-            @(myOnly ? Localizer["OnlyMySecurities"] : Localizer["AllSecurities"])
+            @(myOnly? Localizer["OnlyMySecurities"] : Localizer["AllSecurities"])
         </button>
     </div>
 }
@@ -34,30 +128,37 @@ else
     </button>
 </div>
 
-@if (payments == null)
+@if (monthPayments != null && monthPayments.Count > 0)
+{
+    <div class="mb-2 text-muted small">
+        Выплаты за период:
+        @monthPayments.Min(p => p.Date).ToShortDateString() – @monthPayments.Max(p => p.Date).ToShortDateString()
+    </div>
+}
+
+@if (monthPayments == null)
 {
     <p>@Localizer["Loading"]</p>
 }
-else if (payments.Count == 0)
+else if (allPayments?.Count == 0)
 {
     <p>@Localizer["NoPayments"]</p>
 }
-else
+else if (viewMode == "calendar")
 {
-    @if (viewMode == "calendar")
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <button class="btn btn-sm btn-outline-secondary" @onclick="PreviousMonth">←</button>
+        <h5 class="mb-0">@currentMonth.ToString("MMMM yyyy")</h5>
+        <button class="btn btn-sm btn-outline-secondary" @onclick="NextMonth">→</button>
+    </div>
+
+    @if (monthPayments.Count == 0)
     {
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <button class="btn btn-sm btn-outline-secondary" @onclick="PreviousMonth">←</button>
-            <h5 class="mb-0">@currentMonth.ToString("MMMM yyyy")</h5>
-            <button class="btn btn-sm btn-outline-secondary" @onclick="NextMonth">→</button>
-        </div>
+        <div class="alert alert-warning">В этом месяце выплат нет. Попробуйте переключить месяц.</div>
+    }
 
-        @if (!HasPaymentsInMonth(currentMonth))
-        {
-            <div class="alert alert-warning">В этом месяце выплат нет. Попробуйте переключить месяц.</div>
-        }
-
-        <table class="table table-bordered text-center">
+    <div class="table-responsive">
+        <table class="calendar-grid">
             <thead>
                 <tr>
                     @foreach (var dow in daysOfWeek)
@@ -72,79 +173,82 @@ else
                     <tr>
                         @foreach (var day in week)
                         {
-                            var dayEvents = payments.Where(p => p.Date.Date == day.Date).ToList();
-                            var hasPayment = dayEvents.Any();
-                            var eventCount = dayEvents.Count;
-                            string bgClass = "";
-                            if (hasPayment)
-                            {
-                                var firstType = dayEvents.First().Type;
-                                bgClass = firstType switch
-                                {
-                                    "Dividend" => "bg-success text-white",
-                                    "Coupon" => "bg-primary text-white",
-                                    "Amortization" => "bg-warning text-dark",
-                                    _ => "bg-success text-white"
-                                };
-                            }
-
-                            <td class="@(day.IsCurrentMonth ? "" : "text-muted") @bgClass" title="@GetTooltip(dayEvents)">
-                                <div>@day.Day</div>
-                                @if (eventCount == 1)
-                                {
-                                    <small>@dayEvents[0].Ticker</small>
-                                }
-                                else if (eventCount > 1)
-                                {
-                                    <small>@eventCount+</small>
-                                }
-                                @if (hasPayment)
-                                {
-                                    <small>💵</small>
-                                }
-                            </td>
+                            var dayEvents = monthPayments.Where(p => p.Date.Date == day.Date).ToList();
+                            <CalendarCell Day="@day.Day" IsCurrentMonth="@day.IsCurrentMonth" Events="@dayEvents" />
                         }
                     </tr>
                 }
             </tbody>
         </table>
-    }
-    else
+    </div>
+
+    @if (isAuthenticated && myOnly && monthPayments.Count > 0)
     {
-        <table class="table table-striped">
-            <thead>
+        var today = DateTime.Today;
+        var paid = monthPayments.Where(p => p.Date < today).ToList();
+        var upcoming = monthPayments.Where(p => p.Date >= today).ToList();
+        var totalPaid = paid.Sum(p => p.UserTotalAmount ?? p.AmountPerUnit);
+        var totalUpcoming = upcoming.Sum(p => p.UserTotalAmount ?? p.AmountPerUnit);
+        var totalAll = totalPaid + totalUpcoming;
+
+        <div class="mt-4">
+            <h5>@Localizer["PaymentHistory"]</h5>
+            <ul class="list-group">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Всего выплат в периоде
+                    <span class="badge bg-primary rounded-pill">@totalAll.ToString("C2")</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center" title="@GetPaidTooltip(paid)">
+                    Уже выплачено
+                    <span class="badge bg-success rounded-pill">@totalPaid.ToString("C2")</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center" title="@GetUpcomingTooltip(upcoming)">
+                    Еще будет выплачено
+                    <span class="badge bg-warning text-dark rounded-pill">@totalUpcoming.ToString("C2")</span>
+                </li>
+            </ul>
+        </div>
+    }
+}
+else
+{
+    var list = (monthPayments ?? allPayments) ?? new List<PaymentEventDto>();
+    var orderedList = list.OrderBy(p => p.Date).ToList();
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>@Localizer["Date"]</th>
+                <th>@Localizer["Ticker"]</th>
+                <th>@Localizer["PaymentType"]</th>
+                <th>@Localizer["AmountPerUnit"]</th>
+                @if (isAuthenticated && myOnly)
+                {
+                    <th>@Localizer["UserAmount"]</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in orderedList)
+            {
                 <tr>
-                    <th>@Localizer["Date"]</th>
-                    <th>@Localizer["Ticker"]</th>
-                    <th>@Localizer["PaymentType"]</th>
-                    <th>@Localizer["AmountPerUnit"]</th>
+                    <td>@p.Date.ToShortDateString()</td>
+                    <td>@p.Ticker</td>
+                    <td>@GetLocalizedType(p.Type)</td>
+                    <td>@p.AmountPerUnit.ToString("F2") @p.Currency</td>
                     @if (isAuthenticated && myOnly)
                     {
-                        <th>@Localizer["UserAmount"]</th>
+                        <td>@(p.UserTotalAmount?.ToString("F2") ?? "—") @p.Currency</td>
                     }
                 </tr>
-            </thead>
-            <tbody>
-                @foreach (var p in payments)
-                {
-                    <tr>
-                        <td>@p.Date.ToShortDateString()</td>
-                        <td>@p.Ticker</td>
-                        <td>@p.Type</td>
-                        <td>@p.AmountPerUnit.ToString("F2") @p.Currency</td>
-                        @if (isAuthenticated && myOnly)
-                        {
-                            <td>@(p.UserTotalAmount?.ToString("F2") ?? "—") @p.Currency</td>
-                        }
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
+            }
+        </tbody>
+    </table>
 }
 
 @code {
-    private List<PaymentEventDto>? payments;
+    private List<PaymentEventDto>? allPayments;
+    private List<PaymentEventDto>? monthPayments;
     private bool myOnly;
     private bool isAuthenticated;
     private string viewMode = "calendar";
@@ -157,68 +261,30 @@ else
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
         myOnly = isAuthenticated;
-        await LoadPayments();
-        SetInitialMonth();
+        currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        await LoadAllPayments();
+        await LoadMonthPayments();
         BuildCalendar();
     }
 
-    private async Task LoadPayments()
+    private async Task LoadAllPayments()
     {
         try
         {
-            var url = $"api/payments/upcoming?count=200&myOnly={myOnly.ToString().ToLower()}";
-            payments = await Http.GetFromJsonAsync<List<PaymentEventDto>>(url) ?? new();
+            var url = $"api/payments/upcoming?count=1000&myOnly={myOnly.ToString().ToLower()}";
+            allPayments = await Http.GetFromJsonAsync<List<PaymentEventDto>>(url) ?? new();
         }
-        catch
+        catch { allPayments = new(); }
+    }
+
+    private async Task LoadMonthPayments()
+    {
+        try
         {
-            payments = new();
+            var url = $"api/payments/upcoming?count=500&myOnly={myOnly.ToString().ToLower()}&year={currentMonth.Year}&month={currentMonth.Month}";
+            monthPayments = await Http.GetFromJsonAsync<List<PaymentEventDto>>(url) ?? new();
         }
-    }
-
-    private void SetInitialMonth()
-    {
-        if (payments == null || payments.Count == 0)
-        {
-            currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
-            return;
-        }
-
-        var now = DateTime.Today;
-        var futurePayment = payments.Where(p => p.Date >= now).OrderBy(p => p.Date).FirstOrDefault();
-        if (futurePayment != null)
-        {
-            currentMonth = new DateTime(futurePayment.Date.Year, futurePayment.Date.Month, 1);
-        }
-        else
-        {
-            var lastPayment = payments.OrderByDescending(p => p.Date).First();
-            currentMonth = new DateTime(lastPayment.Date.Year, lastPayment.Date.Month, 1);
-        }
-    }
-
-    private bool HasPaymentsInMonth(DateTime month)
-    {
-        if (payments == null) return false;
-        return payments.Any(p => p.Date.Year == month.Year && p.Date.Month == month.Month);
-    }
-
-    private void SwitchView(string mode)
-    {
-        viewMode = mode;
-        if (mode == "calendar") BuildCalendar();
-        StateHasChanged();
-    }
-
-    private void PreviousMonth()
-    {
-        currentMonth = currentMonth.AddMonths(-1);
-        BuildCalendar();
-    }
-
-    private void NextMonth()
-    {
-        currentMonth = currentMonth.AddMonths(1);
-        BuildCalendar();
+        catch { monthPayments = new(); }
     }
 
     private void BuildCalendar()
@@ -247,19 +313,48 @@ else
         }
     }
 
-    private async Task ToggleMyOnly()
+    private async Task PreviousMonth()
     {
-        myOnly = !myOnly;
-        await LoadPayments();
+        currentMonth = currentMonth.AddMonths(-1);
+        await LoadMonthPayments();
         BuildCalendar();
+    }
+
+    private async Task NextMonth()
+    {
+        currentMonth = currentMonth.AddMonths(1);
+        await LoadMonthPayments();
+        BuildCalendar();
+    }
+
+    private void SwitchView(string mode)
+    {
+        viewMode = mode;
+        if (mode == "calendar") BuildCalendar();
         StateHasChanged();
     }
 
-    private string GetTooltip(List<PaymentEventDto> events)
+    private async Task ToggleMyOnly()
     {
-        if (events == null || events.Count == 0) return "";
-        return string.Join("\n", events.Select(e => $"{e.Ticker}: {e.AmountPerUnit:F2} {e.Currency} ({e.Type})"));
+        myOnly = !myOnly;
+        await LoadAllPayments();
+        await LoadMonthPayments();
+        BuildCalendar();
     }
+
+    private string GetPaidTooltip(List<PaymentEventDto> events) =>
+        string.Join("\n", events.Select(e => $"{e.Ticker}: {e.UserTotalAmount ?? e.AmountPerUnit:F2} {e.Currency}"));
+
+    private string GetUpcomingTooltip(List<PaymentEventDto> events) =>
+        string.Join("\n", events.Select(e => $"{e.Ticker}: {e.UserTotalAmount ?? e.AmountPerUnit:F2} {e.Currency}"));
+
+    private string GetLocalizedType(string type) => type switch
+    {
+        "Dividend" => "Дивиденд",
+        "Coupon" => "Купон",
+        "Amortization" => "Амортизация",
+        _ => type
+    };
 
     public class CalendarDay
     {
