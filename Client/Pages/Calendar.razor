@@ -1,0 +1,101 @@
+﻿@page "/calendar"
+@using InvestmentTracker.Shared.Models
+@using InvestmentTracker.Client.Resources
+@using Microsoft.Extensions.Localization
+@using Microsoft.AspNetCore.Components.Authorization
+@inject HttpClient Http
+@inject IStringLocalizer<SharedResource> Localizer
+@inject AuthenticationStateProvider AuthStateProvider
+
+<h3>@Localizer["Calendar"]</h3>
+
+@if (isAuthenticated)
+{
+    <div class="mb-3">
+        <button class="btn btn-outline-primary @(myOnly ? "active" : "")" @onclick="ToggleMyOnly">
+            @(myOnly? Localizer["OnlyMySecurities"] : Localizer["AllSecurities"])
+        </button>
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        @Localizer["GuestMessage"]
+        <a href="/login" class="btn btn-sm btn-primary ms-3">@Localizer["Login"]</a>
+    </div>
+}
+
+@if (payments == null)
+{
+    <p>@Localizer["Loading"]</p>
+}
+else if (payments.Count == 0)
+{
+    <p>@Localizer["NoPayments"]</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>@Localizer["Date"]</th>
+                <th>@Localizer["Ticker"]</th>
+                <th>@Localizer["PaymentType"]</th>
+                <th>@Localizer["AmountPerUnit"]</th>
+                @if (isAuthenticated && myOnly)
+                {
+                    <th>@Localizer["UserAmount"]</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in payments)
+            {
+                <tr>
+                    <td>@p.Date.ToShortDateString()</td>
+                    <td>@p.Ticker</td>
+                    <td>@p.Type</td>
+                    <td>@p.AmountPerUnit.ToString("F2") @p.Currency</td>
+                    @if (isAuthenticated && myOnly)
+                    {
+                        <td>@(p.UserTotalAmount?.ToString("F2") ?? "—") @p.Currency</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<PaymentEventDto>? payments;
+    private bool myOnly;
+    private bool isAuthenticated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        // По умолчанию для авторизованных показываем все, но можно сразу включить "только мои"
+        myOnly = isAuthenticated;
+        await LoadPayments();
+    }
+
+    private async Task LoadPayments()
+    {
+        try
+        {
+            var url = $"api/payments/upcoming?count=30&myOnly={myOnly.ToString().ToLower()}";
+            payments = await Http.GetFromJsonAsync<List<PaymentEventDto>>(url) ?? new();
+        }
+        catch
+        {
+            payments = new();
+        }
+    }
+
+    private async Task ToggleMyOnly()
+    {
+        myOnly = !myOnly;
+        await LoadPayments();
+    }
+}

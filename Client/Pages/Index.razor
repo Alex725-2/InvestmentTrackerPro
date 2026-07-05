@@ -6,6 +6,7 @@
 @using System.Globalization
 @using Microsoft.Extensions.Localization
 @using InvestmentTracker.Client.Resources
+@inject IJSRuntime JS
 @inject IStringLocalizer<SharedResource> Localizer
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IAuthService AuthService
@@ -33,14 +34,11 @@
                         <strong>@Localizer["Admin"]:</strong>
                         <a href="/swagger" target="_blank" class="btn btn-sm btn-outline-primary ms-2">@Localizer["Swagger"]</a>
                         <a href="/admin/users" class="btn btn-sm btn-outline-primary ms-2">@Localizer["AdminUsers"]</a>
-                        <button class="btn btn-sm btn-outline-secondary ms-2" @onclick="ShowToken">@Localizer["ShowToken"]</button>
+                        <button class="btn btn-sm btn-outline-secondary ms-2" @onclick="CopyToken">@Localizer["CopyToken"]</button>
                     </div>
-                    @if (!string.IsNullOrEmpty(tokenDisplay))
+                    @if (copied)
                     {
-                        <div class="alert alert-light border">
-                            <small><strong>JWT Token:</strong></small>
-                            <pre class="mb-0">@tokenDisplay</pre>
-                        </div>
+                        <div class="alert alert-success mt-2">Токен скопирован в буфер обмена</div>
                     }
                 </div>
             </div>
@@ -63,12 +61,10 @@
                         }
                         else if (topPositions == null)
                         {
-
                             <p class="text-muted">@Localizer["Loading"]</p>
                         }
                         else if (topPositions.Count == 0)
                         {
-
                             <p class="text-muted">@Localizer["NoPositions"]</p>
                         }
                         else
@@ -108,7 +104,6 @@
                         }
                         else
                         {
-
                             <p class="text-muted">@Localizer["Loading"]</p>
                         }
                     </div>
@@ -130,7 +125,6 @@
                         }
                         else
                         {
-
                             <p class="text-muted">@Localizer["Loading"]</p>
                         }
                     </div>
@@ -177,12 +171,10 @@
                         }
                         else if (history == null)
                         {
-
                             <p class="text-muted">@Localizer["Loading"]</p>
                         }
                         else if (history.Count == 0)
                         {
-
                             <p class="text-muted">@Localizer["NoHistory"]</p>
                         }
                         else
@@ -278,7 +270,7 @@
     private List<HistoryPointDto>? history;
     private MarketSnapshotDto? market;
     private string? globalError, topError, summaryError, historyError;
-    private string? tokenDisplay;
+    private bool copied;
 
     protected override async Task OnInitializedAsync()
     {
@@ -330,10 +322,23 @@
     private void ClearData()
     {
         topPositions = null; summary = null; history = null; market = null;
-        globalError = topError = summaryError = historyError = null; tokenDisplay = null;
+        globalError = topError = summaryError = historyError = null;
+        // tokenDisplay больше не используется
     }
 
-    private async Task ShowToken() { tokenDisplay = await AuthService.GetToken(); }
+    private async Task CopyToken()
+    {
+        var token = await AuthService.GetToken();
+        if (!string.IsNullOrEmpty(token))
+        {
+            await JS.InvokeVoidAsync("copyToClipboard", token);
+            copied = true;
+            StateHasChanged();
+            await Task.Delay(3000);
+            copied = false;
+            StateHasChanged();
+        }
+    }
 
     public void Dispose() => AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
 }

@@ -120,11 +120,19 @@
   <data name="ErrorLogin" xml:space="preserve"><value>Ошибка входа</value></data>
   <data name="ErrorRegister" xml:space="preserve"><value>Ошибка регистрации</value></data>
   <data name="LoadFromMOEX" xml:space="preserve"><value>Загрузить из MOEX</value></data>
-  <data name="TickerNotFound" xml:space="preserve"><value>Тикер не найден на MOEX.</value></data>
-  <data name="TickerRequired" xml:space="preserve"><value>Введите корректный тикер</value></data>
-  <data name="SecurityNotFound" xml:space="preserve"><value>Ошибка сохранения бумаги</value></data>
-  <data name="SelectAssetType" xml:space="preserve"><value>Выберите тип актива</value></data>
-  <data name="NewSecurity" xml:space="preserve"><value>Новая бумага</value></data>
   <data name="NoTransactions" xml:space="preserve"><value>Нет сделок</value></data>
+  
+  <data name="Calendar" xml:space="preserve"><value>Календарь выплат</value></data>
+<data name="UpcomingPayments" xml:space="preserve"><value>Ближайшие выплаты</value></data>
+<data name="OnlyMySecurities" xml:space="preserve"><value>Только мои бумаги</value></data>
+<data name="AllSecurities" xml:space="preserve"><value>Все бумаги</value></data>
+<data name="LoginToSeePortfolio" xml:space="preserve"><value>Войдите, чтобы видеть выплаты по своим бумагам</value></data>
+<data name="PaymentType" xml:space="preserve"><value>Тип</value></data>
+<data name="AmountPerUnit" xml:space="preserve"><value>На бумагу</value></data>
+<data name="UserAmount" xml:space="preserve"><value>Ваша сумма</value></data>
+<data name="NoPayments" xml:space="preserve"><value>Нет данных о выплатах</value></data>
+<data name="GuestMessage" xml:space="preserve"><value>Зарегистрируйтесь, чтобы загрузить свой портфель и видеть персональные суммы</value></data>
+
+<data name="CopyToken" xml:space="preserve"><value>Скопировать токен</value></data>
   
 </root>

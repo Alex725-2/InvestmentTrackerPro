@@ -425,9 +425,8 @@ namespace InvestmentTracker.Server.Services
                     var amount = row[valueIdx].GetDecimal();
                     var currency = currencyIdx >= 0 ? row[currencyIdx].GetString() ?? "RUB" : "RUB";
 
-                    // Только будущие даты
-                    if (date >= DateTime.Today)
-                        result.Add((date, amount, currency));
+                    // Загружаем все дивиденды (без фильтра)
+                    result.Add((date, amount, currency));
                 }
             }
             catch (Exception ex)
