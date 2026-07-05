@@ -18,6 +18,7 @@ namespace InvestmentTracker.Server.Data
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<PortfolioItem> PortfolioItems { get; set; }
         public DbSet<Quote> Quotes { get; set; }
+        public DbSet<PaymentEvent> PaymentEvents { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -48,6 +49,10 @@ namespace InvestmentTracker.Server.Data
                     entity.Property(e => e.Name).HasColumnType("TEXT");
                     entity.Property(e => e.LoginProvider).HasColumnType("TEXT");
                 });
+
+                builder.Entity<PaymentEvent>()
+                    .Property(p => p.AmountPerUnit)
+                    .HasColumnType("decimal(18,4)");
             }
             base.OnModelCreating(builder);
 

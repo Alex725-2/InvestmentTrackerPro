@@ -394,7 +394,49 @@ namespace InvestmentTracker.Server.Services
             catch { return null; }
         }
 
-    
+        public async Task<List<(DateTime Date, decimal Amount, string Currency)>> GetDividendsAsync(string ticker)
+        {
+            var result = new List<(DateTime, decimal, string)>();
+            try
+            {
+                var url = $"https://iss.moex.com/iss/securities/{ticker.ToUpper()}/dividends.json";
+                using var stream = await _httpClient.GetStreamAsync(url);
+                using var doc = await JsonDocument.ParseAsync(stream);
+
+                var root = doc.RootElement;
+                if (!root.TryGetProperty("dividends", out var divs) ||
+                    !divs.TryGetProperty("data", out var data) ||
+                    data.GetArrayLength() == 0)
+                    return result;
+
+                var columns = divs.GetProperty("columns");
+                int dateIdx = FindColumnIndex(columns, "registryclosedate");
+                int valueIdx = FindColumnIndex(columns, "value");
+                int currencyIdx = FindColumnIndex(columns, "currencyid");
+
+                if (dateIdx == -1 || valueIdx == -1) return result;
+
+                foreach (var row in data.EnumerateArray())
+                {
+                    var dateStr = row[dateIdx].GetString();
+                    if (string.IsNullOrWhiteSpace(dateStr)) continue;
+                    if (!DateTime.TryParse(dateStr, out var date)) continue;
+
+                    var amount = row[valueIdx].GetDecimal();
+                    var currency = currencyIdx >= 0 ? row[currencyIdx].GetString() ?? "RUB" : "RUB";
+
+                    // Только будущие даты
+                    if (date >= DateTime.Today)
+                        result.Add((date, amount, currency));
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error fetching dividends for {Ticker}", ticker);
+            }
+            return result;
+        }
+
         // Вспомогательные классы
         public class IndexInfo
         {
