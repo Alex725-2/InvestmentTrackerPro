@@ -143,5 +143,7 @@
 <data name="Paid" xml:space="preserve"><value>Уже выплачено</value></data>
 <data name="Upcoming" xml:space="preserve"><value>Еще будет выплачено</value></data>
 
+<data name="SearchSecurityPlaceholder" xml:space="preserve"><value>Введите тикер или ISIN...</value></data>
+
   
 </root>

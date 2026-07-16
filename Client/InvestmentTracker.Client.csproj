@@ -21,10 +21,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Shared\InvestmentTracker.Shared.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Components\" />
-  </ItemGroup>
   
 
 

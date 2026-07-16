@@ -2,6 +2,7 @@
 @using InvestmentTracker.Shared.Models
 @using Microsoft.Extensions.Localization
 @using InvestmentTracker.Client.Resources
+@using InvestmentTracker.Client.Components   @* <-- добавлено *@
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @inject IStringLocalizer<SharedResource> Localizer
@@ -22,13 +23,7 @@
 
     <div class="form-group">
         <label>@Localizer["SecurityName"]</label>
-        <InputSelect @bind-Value="dto.SecurityId" class="form-control" @bind-Value:after="OnSecurityChanged">
-            <option value="">@Localizer["SelectSecurity"]</option>
-            @foreach (var sec in securities)
-            {
-                <option value="@sec.Id">@sec.Ticker</option>
-            }
-        </InputSelect>
+        <SecuritySearch OnSecuritySelected="HandleSecuritySelected" />
     </div>
 
     <div class="form-group">
@@ -99,10 +94,15 @@
         try { var price = await Http.GetFromJsonAsync<decimal?>($"api/securities/{dto.SecurityId}/price"); if (price.HasValue) dto.Price = price.Value; } catch { }
     }
 
+    private async Task HandleSecuritySelected(SecurityDto selected)
+    {
+        dto.SecurityId = selected.Id;
+        await OnSecurityChanged();
+    }
+
     private async Task HandleSubmit()
     {
-        dto.DateString = dto.Date.ToString("yyyy-MM-dd");   // <-- обязательно для правильной даты на сервере
-
+        dto.DateString = dto.Date.ToString("yyyy-MM-dd");
         try
         {
             var response = await Http.PostAsJsonAsync("api/transactions", dto);

@@ -1,9 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using InvestmentTracker.Server.Data;
+﻿using InvestmentTracker.Server.Data;
 using InvestmentTracker.Server.Models;
 using InvestmentTracker.Shared.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using static InvestmentTracker.Server.Services.MoexService;
 
 namespace InvestmentTracker.Server.Controllers
 {
@@ -58,16 +59,26 @@ namespace InvestmentTracker.Server.Controllers
                 AssetTypeName = security.AssetType.Name
             });
         }
+        
 
         [HttpGet("lookup")]
         [AllowAnonymous]   // поиск тикера нужен всем
-        public async Task<ActionResult<SecurityDto?>> Lookup([FromQuery] string? ticker)
+        public async Task<ActionResult<SecurityDto?>> Lookup([FromQuery] string? ticker, [FromQuery] string? isin)
         {
-            if (string.IsNullOrWhiteSpace(ticker))
-                return BadRequest("Specify ticker");
+            if (string.IsNullOrWhiteSpace(ticker) && string.IsNullOrWhiteSpace(isin))
+                return BadRequest("Specify ticker or isin");
 
             var moexService = HttpContext.RequestServices.GetRequiredService<Services.MoexService>();
-            var info = await moexService.GetSecurityInfoAsync(ticker);
+            SecurityInfo? info = null;
+
+            if (!string.IsNullOrWhiteSpace(isin))
+            {
+                info = await moexService.GetSecurityInfoByIsinAsync(isin);
+            }
+            else if (!string.IsNullOrWhiteSpace(ticker))
+            {
+                info = await moexService.LookupSecurityAsync(ticker);
+            }
 
             if (info == null)
                 return NotFound();

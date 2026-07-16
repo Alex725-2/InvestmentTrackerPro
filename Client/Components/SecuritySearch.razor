@@ -1,0 +1,151 @@
+﻿@using InvestmentTracker.Shared.Models
+@using Microsoft.Extensions.Localization
+@using InvestmentTracker.Client.Resources
+@inject HttpClient Http
+@inject IStringLocalizer<SharedResource> Localizer
+
+<div class="position-relative">
+    <input type="text"
+           class="form-control"
+           placeholder="@Localizer["SearchSecurityPlaceholder"]"
+           value="@searchText"
+           @oninput="OnSearchInput"
+           @onblur="OnBlur" />
+    @if (selectedSecurity != null)
+    {
+        <div class="alert alert-success d-flex align-items-center mt-2 mb-0 p-2" role="alert">
+            <span class="oi oi-check me-2" aria-hidden="true"></span>
+            <div>
+                <strong>@selectedSecurity.Name</strong>
+                <div class="text-muted small">
+                    @selectedSecurity.Ticker
+                    @if (!string.IsNullOrWhiteSpace(selectedSecurity.Isin))
+                    {
+                        <span>(ISIN: @selectedSecurity.Isin)</span>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (suggestions != null && suggestions.Count > 0)
+    {
+        <ul class="list-group position-absolute w-100" style="z-index:1000; max-height:200px; overflow-y:auto;">
+            @foreach (var security in suggestions)
+            {
+                <li class="list-group-item list-group-item-action"
+                    @onclick="() => SelectSecurity(security)">
+                    <div><strong>@security.Ticker</strong> <small class="text-muted">@security.Isin</small></div>
+                    <small class="text-muted">@security.Name</small>
+                </li>
+            }
+        </ul>
+    }
+    @if (error != null)
+    {
+        <span class="text-danger">@error</span>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback<SecurityDto> OnSecuritySelected { get; set; }
+
+    private SecurityDto? selectedSecurity;
+    private string searchText = string.Empty;
+    private List<SecurityDto>? suggestions;
+    private string? error;
+    private bool isAdding;
+
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        selectedSecurity = null;  // пользователь начал ввод – сбрасываем выбранную бумагу
+        searchText = e.Value?.ToString() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            suggestions = null;
+            error = null;
+            return;
+        }
+
+        try
+        {
+            var allSecurities = await Http.GetFromJsonAsync<List<SecurityDto>>("api/securities");
+            if (allSecurities != null)
+            {
+                var txt = searchText.ToUpperInvariant();
+                suggestions = allSecurities
+                    .Where(s => (s.Ticker != null && s.Ticker.Contains(txt)) ||
+                                (s.Isin != null && s.Isin.Contains(txt)))
+                    .Take(10)
+                    .ToList();
+            }
+        }
+        catch { suggestions = null; }
+    }
+
+    private async Task OnBlur()
+    {
+        if (isAdding) return;
+        if (!string.IsNullOrWhiteSpace(searchText) && (suggestions == null || !suggestions.Any(s => s.Ticker == searchText || s.Isin == searchText)))
+        {
+            await LookupAndAdd();
+        }
+    }
+
+    private async Task LookupAndAdd()
+    {
+        isAdding = true;
+        error = null;
+        try
+        {
+            var query = searchText.ToUpperInvariant();
+            bool isIsin = query.Length == 12 && !query.Contains(" ");
+            var response = await Http.GetAsync($"api/securities/lookup?{(isIsin ? "isin" : "ticker")}={query}");
+            if (response.IsSuccessStatusCode)
+            {
+                var security = await response.Content.ReadFromJsonAsync<SecurityDto>();
+                if (security != null)
+                {
+                    var existing = await Http.GetFromJsonAsync<List<SecurityDto>>("api/securities");
+                    var already = existing?.FirstOrDefault(s => s.Ticker == security.Ticker);
+                    if (already == null)
+                    {
+                        var addResponse = await Http.PostAsJsonAsync("api/securities", security);
+                        if (addResponse.IsSuccessStatusCode)
+                        {
+                            security = await addResponse.Content.ReadFromJsonAsync<SecurityDto>();
+                        }
+                    }
+                    else security = already;
+                    await OnSecuritySelected.InvokeAsync(security);
+                    selectedSecurity = security;
+                    searchText = security.Ticker;
+                    suggestions = null;
+                    error = null;
+                }
+            }
+            else
+            {
+                error = Localizer["SecurityNotFound"];
+            }
+        }
+        catch (Exception ex)
+        {
+            error = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isAdding = false;
+        }
+    }
+
+    private async Task SelectSecurity(SecurityDto security)
+    {
+        searchText = security.Ticker;
+        suggestions = null;
+        error = null;
+        await OnSecuritySelected.InvokeAsync(security);
+        selectedSecurity = security;
+        StateHasChanged();
+    }
+}
