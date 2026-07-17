@@ -5,7 +5,7 @@
 @inject HttpClient Http
 @inject IStringLocalizer<SharedResource> Localizer
 
-<h3>@Localizer["Profile"]</h3>
+<h3 class="mb-4">@Localizer["Profile"]</h3>
 
 @if (profile == null)
 {
@@ -13,90 +13,214 @@
 }
 else
 {
-    <div class="card mb-4">
+    <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <h5 class="card-title">@Localizer["PersonalInfo"]</h5>
-            <dl class="row">
-                <dt class="col-sm-3">@Localizer["Email"]</dt>
-                <dd class="col-sm-9">@profile.Email</dd>
-                <dt class="col-sm-3">@Localizer["FullName"]</dt>
-                <dd class="col-sm-9">@profile.FullName</dd>
-                <dt class="col-sm-3">@Localizer["LastLoginDate"]</dt>
-                <dd class="col-sm-9">@(profile.LastLoginDate?.ToString("dd.MM.yyyy HH:mm") ?? "—")</dd>
-            </dl>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-body">
-            <h5 class="card-title">@Localizer["ChangePassword"]</h5>
-            <EditForm Model="changePasswordModel" OnValidSubmit="HandleChangePassword">
-                <DataAnnotationsValidator />
-                <ValidationSummary />
-
-                <div class="form-group">
-                    <label>@Localizer["CurrentPassword"]</label>
-                    <InputText type="password" @bind-Value="changePasswordModel.CurrentPassword" class="form-control" />
-                    <ValidationMessage For="@(() => changePasswordModel.CurrentPassword)" />
+            <div class="d-flex align-items-start">
+                <!-- Аватар (заглушка) -->
+                <div class="me-3">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                         style="width: 64px; height: 64px; font-size: 1.5rem;">
+                        @(!string.IsNullOrEmpty(profile.FullName) ? profile.FullName.Substring(0, 1).ToUpper() : "?")
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>@Localizer["NewPassword"]</label>
-                    <InputText type="password" @bind-Value="changePasswordModel.NewPassword" class="form-control" />
-                    <ValidationMessage For="@(() => changePasswordModel.NewPassword)" />
+                <div class="flex-grow-1">
+                    <!-- Имя с возможностью редактирования -->
+                    @if (isEditingName)
+                    {
+                        <div class="input-group input-group-sm mb-2">
+                            <input @bind="editName" class="form-control" placeholder="@Localizer["FullName"]" />
+                            <button class="btn btn-outline-secondary" @onclick="SaveName"><i class="oi oi-check"></i></button>
+                            <button class="btn btn-outline-danger" @onclick="CancelEditName"><i class="oi oi-x"></i></button>
+                        </div>
+                    }
+                    else
+                    {
+                        <h5 class="card-title d-flex align-items-center">
+                            @profile.FullName
+                            <span class="oi oi-pencil ms-2 text-muted" style="cursor:pointer" @onclick="StartEditName" title="@Localizer["EditProfile"]"></span>
+                        </h5>
+                    }
+                    <p class="text-muted mb-1">@profile.Email</p>
+                    <p class="text-muted small">@Localizer["LastLogin"]: @(profile.LastLoginDate?.ToString("g") ?? "—")</p>
                 </div>
-
-                <button type="submit" class="btn btn-primary">@Localizer["Save"]</button>
-            </EditForm>
-
-            @if (!string.IsNullOrEmpty(passwordMessage))
+                <div>
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="ShowPasswordModal">
+                        <i class="oi oi-key me-1"></i> @Localizer["ChangePassword"]
+                    </button>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(profileMessage))
             {
-                <div class="alert @(passwordSuccess ? "alert-success" : "alert-danger") mt-3">@passwordMessage</div>
+                <div class="alert @(profileSuccess ? "alert-success" : "alert-danger") mt-3 mb-0">@profileMessage</div>
             }
         </div>
     </div>
+
+    <!-- Модальное окно смены пароля -->
+    @if (showPasswordChange)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">@Localizer["ChangePassword"]</h5>
+                        <button type="button" class="btn-close" @onclick="HidePasswordModal"></button>
+                    </div>
+                    <EditForm Model="changePassword" OnValidSubmit="HandleChangePassword">
+                        <div class="modal-body">
+                            <div class="form-group mb-3">
+                                <label>@Localizer["CurrentPassword"]</label>
+                                <div class="input-group">
+                                    <InputText type="@(showPassword ? "text" : "password")" @bind-Value="changePassword.OldPassword" class="form-control" placeholder="@Localizer["CurrentPassword"]" />
+                                    <button type="button" class="btn btn-outline-secondary" @onclick="() => showPassword = !showPassword">
+                                        <i class="oi oi-@(showPassword ? "eye" : "eye")"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>@Localizer["NewPassword"]</label>
+                                <div class="input-group">
+                                    <InputText type="@(showNewPassword ? "text" : "password")" @bind-Value="changePassword.NewPassword" class="form-control" placeholder="@Localizer["NewPassword"]" />
+                                    <button type="button" class="btn btn-outline-secondary" @onclick="() => showNewPassword = !showNewPassword">
+                                        <i class="oi oi-@(showNewPassword ? "eye" : "eye")"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrEmpty(passwordMessage))
+                            {
+                                <div class="alert @(passwordSuccess ? "alert-success" : "alert-danger") mt-2">@passwordMessage</div>
+                            }
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="HidePasswordModal">@Localizer["Cancel"]</button>
+                            <button type="submit" class="btn btn-primary">@Localizer["Save"]</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @code {
     private ProfileDto? profile;
-    private ChangePasswordDto changePasswordModel = new();
+    private UpdateProfileDto updateProfile = new();
+    private ChangePasswordDto changePassword = new();
+
+    private string? profileMessage;
+    private bool profileSuccess;
+
     private string? passwordMessage;
     private bool passwordSuccess;
+    private bool showPasswordChange;
+
+    private bool isEditingName;
+    private string editName = string.Empty;
+
+    private bool showPassword;
+    private bool showNewPassword;
 
     protected override async Task OnInitializedAsync()
+    {
+        await LoadProfile();
+    }
+
+    private async Task LoadProfile()
     {
         try
         {
             profile = await Http.GetFromJsonAsync<ProfileDto>("api/account/profile");
-        }
-        catch
-        {
-            profile = new ProfileDto { Email = "Ошибка загрузки", FullName = "" };
-        }
-    }
-
-    private async Task HandleChangePassword()
-    {
-        passwordMessage = null;
-        try
-        {
-            var response = await Http.PostAsJsonAsync("api/account/change-password", changePasswordModel);
-            if (response.IsSuccessStatusCode)
+            if (profile != null)
             {
-                passwordSuccess = true;
-                passwordMessage = "Пароль успешно изменён.";
-                changePasswordModel = new ChangePasswordDto();
-            }
-            else
-            {
-                passwordSuccess = false;
-                var error = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-                passwordMessage = error?.ContainsKey("message") == true ? error["message"] : "Ошибка при смене пароля.";
+                updateProfile.FullName = profile.FullName ?? "";
             }
         }
         catch (Exception ex)
         {
-            passwordSuccess = false;
+            profileMessage = $"Ошибка загрузки профиля: {ex.Message}";
+        }
+    }
+
+    private void StartEditName()
+    {
+        editName = profile?.FullName ?? "";
+        isEditingName = true;
+    }
+
+    private async Task SaveName()
+    {
+        updateProfile.FullName = editName;
+        try
+        {
+            var response = await Http.PutAsJsonAsync("api/account/profile", updateProfile);
+            if (response.IsSuccessStatusCode)
+            {
+                profile!.FullName = editName;
+                profileMessage = "Имя обновлено";
+                profileSuccess = true;
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                profileMessage = $"Ошибка: {error}";
+                profileSuccess = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            profileMessage = $"Ошибка: {ex.Message}";
+            profileSuccess = false;
+        }
+        isEditingName = false;
+    }
+
+    private void CancelEditName()
+    {
+        isEditingName = false;
+    }
+
+    private void ShowPasswordModal()
+    {
+        changePassword = new ChangePasswordDto();
+        passwordMessage = null;
+        showPassword = false;
+        showNewPassword = false;
+        showPasswordChange = true;
+    }
+
+    private void HidePasswordModal()
+    {
+        showPasswordChange = false;
+    }
+
+    private async Task HandleChangePassword()
+    {
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/account/change-password", changePassword);
+            if (response.IsSuccessStatusCode)
+            {
+                passwordMessage = "Пароль изменён";
+                passwordSuccess = true;
+                changePassword = new ChangePasswordDto();
+                // Автозакрытие через 1.5 секунды
+                _ = Task.Delay(1500).ContinueWith(_ =>
+                {
+                    showPasswordChange = false;
+                    InvokeAsync(StateHasChanged);
+                });
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                passwordMessage = $"Ошибка: {error}";
+                passwordSuccess = false;
+            }
+        }
+        catch (Exception ex)
+        {
             passwordMessage = $"Ошибка: {ex.Message}";
+            passwordSuccess = false;
         }
     }
 }

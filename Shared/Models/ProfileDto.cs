@@ -1,4 +1,6 @@
-﻿namespace InvestmentTracker.Shared.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace InvestmentTracker.Shared.Models
 {
     public class ProfileDto
     {
@@ -9,7 +11,11 @@
 
     public class ChangePasswordDto
     {
-        public string CurrentPassword { get; set; } = string.Empty;
+        [Required]
+        public string OldPassword { get; set; } = string.Empty;
+
+        [Required]
+        //[MinLength(6)]
         public string NewPassword { get; set; } = string.Empty;
     }
 }

@@ -46,7 +46,7 @@ namespace InvestmentTracker.Server.Controllers
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return NotFound("Пользователь не найден.");
 
-            var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
+            var result = await _userManager.ChangePasswordAsync(user, dto.OldPassword, dto.NewPassword);
             if (!result.Succeeded)
             {
                 var errors = string.Join("; ", result.Errors.Select(e => e.Description));
@@ -54,6 +54,21 @@ namespace InvestmentTracker.Server.Controllers
             }
 
             return Ok(new { Message = "Пароль успешно изменён." });
+        }
+
+        [HttpPut("profile")]
+        [Authorize]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return NotFound();
+
+            user.FullName = dto.FullName;
+            var result = await _userManager.UpdateAsync(user);
+            if (result.Succeeded)
+                return Ok(new { message = "Профиль обновлён" });
+
+            return BadRequest(string.Join(", ", result.Errors.Select(e => e.Description)));
         }
     }
 }

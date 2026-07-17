@@ -61,6 +61,8 @@ namespace InvestmentTracker.Server.Controllers
                 return Unauthorized(new AuthResponse { IsSuccess = false, Message = "Invalid email or password" });
 
             var token = await GenerateJwtToken(user);   // <-- было без await
+            user.LastLoginDate = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
             return Ok(new AuthResponse { IsSuccess = true, Token = token, Message = "Login successful" });
         }
 
