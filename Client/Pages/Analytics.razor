@@ -23,6 +23,7 @@
                             {
                                 <tr>
                                     <td>@pos.Ticker</td>
+                                    <td>@pos.SecurityName</td>
                                     <td>@pos.TotalValue.ToString("F2")</td>
                                     <td class="@(pos.ChangePercent >= 0 ? "text-success" : "text-danger")">@(pos.ChangePercent?.ToString("+0.00;-0.00;0.00") ?? "—")</td>
                                 </tr>

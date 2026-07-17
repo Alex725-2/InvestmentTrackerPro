@@ -55,11 +55,7 @@
                 <div class="card shadow-sm h-100">
                     <div class="card-body">
                         <h5 class="card-title">📈 @Localizer["TopPositions"]</h5>
-                        @if (topError != null)
-                        {
-                            <div class="alert alert-danger small">@topError</div>
-                        }
-                        else if (topPositions == null)
+                        @if (topPositions == null)
                         {
                             <p class="text-muted">@Localizer["Loading"]</p>
                         }
@@ -69,20 +65,26 @@
                         }
                         else
                         {
-                            <table class="table table-sm table-borderless">
-                                <thead><tr><th>@Localizer["Ticker"]</th><th>@Localizer["Price"]</th><th>@Localizer["Change"]</th><th>@Localizer["Value"]</th></tr></thead>
-                                <tbody>
-                                    @foreach (var pos in topPositions)
-                                    {
-                                        <tr>
-                                            <td>@pos.Ticker</td>
-                                            <td>@pos.CurrentPrice.ToString("F2")</td>
-                                            <td class="@(pos.ChangePercent >= 0 ? "text-success" : "text-danger")">@(pos.ChangePercent?.ToString("+0.00;-0.00;0.00") ?? "—")</td>
-                                            <td>@pos.TotalValue.ToString("F2")</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
+                            <div class="list-group list-group-flush">
+                                @foreach (var pos in topPositions)
+                                {
+                                    var priceStr = pos.CurrentPrice > 0 ? pos.CurrentPrice.ToString("F2") : "—";
+                                    var totalStr = pos.TotalValue > 0 ? pos.TotalValue.ToString("F2") : "—";
+                                    <div class="list-group-item d-flex flex-nowrap justify-content-between align-items-start gap-2 px-0">
+                                        <div class="text-truncate" style="min-width: 0;">
+                                            <div class="fw-bold text-truncate">@pos.Ticker</div>
+                                            <small class="text-muted text-truncate d-block">@pos.SecurityName</small>
+                                        </div>
+                                        <div class="text-end text-nowrap ms-auto" style="min-width: 80px;">
+                                            <div>@priceStr</div>
+                                            <div class="@(pos.ChangePercent >= 0 ? "text-success" : "text-danger") small">
+                                                @(pos.ChangePercent?.ToString("+0.00;-0.00;0.00") ?? "—")
+                                            </div>
+                                        </div>
+                                        <div class="fw-bold text-end text-nowrap" style="min-width: 80px;">@totalStr</div>
+                                    </div>
+                                }
+                            </div>
                         }
                     </div>
                 </div>
@@ -164,30 +166,35 @@
             <div class="col-md-6 col-lg-6 mb-4">
                 <div class="card shadow-sm h-100">
                     <div class="card-body">
-                        <h5 class="card-title">📈 @Localizer["History"]</h5>
-                        @if (historyError != null)
-                        {
-                            <div class="alert alert-danger small">@historyError</div>
-                        }
-                        else if (history == null)
+                        <h5 class="card-title">📈 @Localizer["PortfolioHistoryTitle"]</h5>
+                        @if (history == null)
                         {
                             <p class="text-muted">@Localizer["Loading"]</p>
                         }
                         else if (history.Count == 0)
                         {
-                            <p class="text-muted">@Localizer["NoHistory"]</p>
+                            <p class="text-muted">@Localizer["NotEnoughData"]</p>
                         }
                         else
                         {
                             <table class="table table-sm table-striped">
-                                <thead><tr><th>@Localizer["Date"]</th><th>@Localizer["TotalValue"]</th></tr></thead>
+                                <thead>
+                                    <tr>
+                                        <th>@Localizer["Date"]</th>
+                                        <th class="text-end">@Localizer["PortfolioValue"]</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     @foreach (var point in history)
                                     {
-                                        <tr><td>@point.Date.ToShortDateString()</td><td>@point.TotalValue.ToString("C2")</td></tr>
+                                        <tr>
+                                            <td>@point.Date.ToString("dd.MM.yyyy")</td>
+                                            <td class="text-end">@point.TotalValue.ToString("C2")</td>
+                                        </tr>
                                     }
                                 </tbody>
                             </table>
+                            <div class="text-muted small mt-1">@Localizer["PortfolioHistoryHint"]</div>
                         }
                     </div>
                 </div>

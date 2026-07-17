@@ -142,8 +142,11 @@
 <data name="TotalPayments" xml:space="preserve"><value>Всего выплат</value></data>
 <data name="Paid" xml:space="preserve"><value>Уже выплачено</value></data>
 <data name="Upcoming" xml:space="preserve"><value>Еще будет выплачено</value></data>
-
 <data name="SearchSecurityPlaceholder" xml:space="preserve"><value>Введите тикер или ISIN...</value></data>
+<data name="NotEnoughData" xml:space="preserve"><value>Недостаточно данных</value></data>
+<data name="PortfolioValue" xml:space="preserve"><value>Стоимость портфеля</value></data>
+<data name="PortfolioHistoryTitle" xml:space="preserve"><value>Динамика портфеля</value></data>
+<data name="PortfolioHistoryHint" xml:space="preserve"><value>Стоимость всех активов по дням, когда есть данные о ценах</value></data>
 
   
 </root>

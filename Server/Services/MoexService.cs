@@ -61,6 +61,7 @@ namespace InvestmentTracker.Server.Services
                 int secidIdx = FindColumnIndex(columns, "SECID");
                 int isinIdx = FindColumnIndex(columns, "ISIN");
                 int nameIdx = FindColumnIndex(columns, "SHORTNAME");
+                int secTypeIdx = FindColumnIndex(columns, "SECTYPE"); // важно для ETF
 
                 if (secidIdx == -1 || nameIdx == -1) return null;
 
@@ -68,14 +69,15 @@ namespace InvestmentTracker.Server.Services
                 string? secid = row[secidIdx].GetString();
                 string? isin = isinIdx >= 0 ? row[isinIdx].GetString() : null;
                 string? name = row[nameIdx].GetString();
+                string? secType = secTypeIdx >= 0 ? row[secTypeIdx].GetString() : null;
 
                 if (string.IsNullOrWhiteSpace(secid) || string.IsNullOrWhiteSpace(name))
                     return null;
 
-                int? assetTypeId = market switch
+                // Определяем AssetTypeId по SECTYPE, если есть, иначе по рынку
+                int? assetTypeId = MapSecTypeToAssetTypeId(secType) ?? market switch
                 {
-                    "shares" => board == "TQTF" ? 3 : 1, // TQTF - паи (ПИФ), иначе акция
-                    "bonds" => 2,                           // облигация
+                    "bonds" => 2,
                     _ => null
                 };
 
@@ -91,6 +93,19 @@ namespace InvestmentTracker.Server.Services
             {
                 return null;
             }
+        }
+
+        // МАППИНГ ТИПОВ (добавлен ETF)
+        private int? MapSecTypeToAssetTypeId(string? secType)
+        {
+            return secType switch
+            {
+                "1" => 1, // Акция
+                "2" => 2, // Облигация
+                "9" => 3, // ПИФ
+                "E" => 4, // ETF
+                _ => null
+            };
         }
 
         // --------------------------------------------------
@@ -221,9 +236,23 @@ namespace InvestmentTracker.Server.Services
         // --------------------------------------------------
         public async Task<decimal?> GetCurrentPriceAsync(string ticker)
         {
+            // Пробуем акции (TQBR)
+            var price = await GetPriceFromBoardAsync(ticker, "shares", "TQBR");
+            if (price.HasValue) return price;
+
+            // Пробуем облигации (TQCB, TQOB)
+            price = await GetPriceFromBoardAsync(ticker, "bonds", "TQCB");
+            if (price.HasValue) return price;
+
+            price = await GetPriceFromBoardAsync(ticker, "bonds", "TQOB");
+            return price; // null, если не найдено
+        }
+
+        private async Task<decimal?> GetPriceFromBoardAsync(string ticker, string market, string board)
+        {
             try
             {
-                var url = $"https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities/{ticker.ToUpper()}.json";
+                var url = $"https://iss.moex.com/iss/engines/stock/markets/{market}/boards/{board}/securities/{ticker.ToUpper()}.json";
                 using var stream = await _httpClient.GetStreamAsync(url);
                 using var doc = await JsonDocument.ParseAsync(stream);
 
@@ -253,14 +282,13 @@ namespace InvestmentTracker.Server.Services
                 var lastElement = row[lastIdx];
                 if (lastElement.ValueKind == JsonValueKind.Number && lastElement.TryGetDecimal(out var price))
                     return price;
-                else if (lastElement.ValueKind == JsonValueKind.String && decimal.TryParse(lastElement.GetString(), out var parsedPrice))
+                if (lastElement.ValueKind == JsonValueKind.String && decimal.TryParse(lastElement.GetString(), out var parsedPrice))
                     return parsedPrice;
 
                 return null;
             }
-            catch (Exception ex)
+            catch
             {
-                _logger.LogError(ex, "Error fetching price for {Ticker}", ticker);
                 return null;
             }
         }

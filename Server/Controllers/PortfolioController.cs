@@ -119,40 +119,27 @@ namespace InvestmentTracker.Server.Controllers
 
             var positions = await _context.PortfolioItems
                 .Where(p => p.UserId == userId)
-                .Select(p => new
+                .Select(p => new TopPositionDto
                 {
                     Ticker = p.Security.Ticker,
-                    Quantity = p.Quantity,
+                    SecurityName = p.Security.Name,          // <-- заполняем
                     CurrentPrice = _context.Quotes
                         .Where(q => q.SecurityId == p.SecurityId)
                         .OrderByDescending(q => q.Date)
                         .Select(q => (decimal?)q.Price)
-                        .FirstOrDefault() ?? 0m
+                        .FirstOrDefault() ?? 0m,
+                    ChangePercent = null,
+                    TotalValue = p.Quantity * (_context.Quotes
+                        .Where(q => q.SecurityId == p.SecurityId)
+                        .OrderByDescending(q => q.Date)
+                        .Select(q => (decimal?)q.Price)
+                        .FirstOrDefault() ?? 0m)
                 })
-                .ToListAsync();
-
-            // Получаем MoexService из DI
-            var moexService = HttpContext.RequestServices.GetRequiredService<Services.MoexService>();
-
-            var top5 = new List<TopPositionDto>();
-            foreach (var pos in positions)
-            {
-                var change = await moexService.GetChangePercentSafeAsync(pos.Ticker);
-                top5.Add(new TopPositionDto
-                {
-                    Ticker = pos.Ticker,
-                    CurrentPrice = pos.CurrentPrice,
-                    ChangePercent = change,
-                    TotalValue = pos.Quantity * pos.CurrentPrice
-                });
-            }
-
-            var result = top5
                 .OrderByDescending(p => p.TotalValue)
                 .Take(5)
-                .ToList();
+                .ToListAsync();
 
-            return Ok(result);
+            return Ok(positions);
         }
 
         // История портфеля
@@ -160,33 +147,36 @@ namespace InvestmentTracker.Server.Controllers
         public async Task<ActionResult<List<HistoryPointDto>>> GetHistory()
         {
             var userId = GetUserId();
-            var fromDate = DateTime.UtcNow.AddDays(-7);
+            var fromDate = DateTime.UtcNow.AddDays(-30);
 
-            // Загружаем все котировки, связанные с позициями пользователя
-            var quotes = await _context.Quotes
+            // Попытка получить агрегированную историю за 30 дней
+            var history = await _context.Quotes
                 .Where(q => q.Date >= fromDate)
-                .Where(q => _context.PortfolioItems
-                    .Any(p => p.UserId == userId && p.SecurityId == q.SecurityId))
-                .Select(q => new
-                {
-                    q.Date,
-                    Value = q.Price * _context.PortfolioItems
-                        .Where(p => p.UserId == userId && p.SecurityId == q.SecurityId)
-                        .Select(p => p.Quantity)
-                        .FirstOrDefault()
-                })
+                .Join(_context.PortfolioItems.Where(p => p.UserId == userId),
+                      q => q.SecurityId,
+                      p => p.SecurityId,
+                      (q, p) => new { q.Date, Value = p.Quantity * q.Price })
+                .GroupBy(x => x.Date.Date)
+                .Select(g => new HistoryPointDto { Date = g.Key, TotalValue = g.Sum(x => x.Value) })
+                .OrderBy(x => x.Date)
                 .ToListAsync();
 
-            // Группируем в памяти
-            var history = quotes
-                .GroupBy(x => x.Date.Date)
-                .Select(g => new HistoryPointDto
-                {
-                    Date = g.Key,
-                    TotalValue = g.Sum(x => x.Value)
-                })
-                .OrderBy(x => x.Date)
-                .ToList();
+            // Если записей меньше 3, берём последние 10 котировок без группировки
+            if (history.Count < 3)
+            {
+                var latestQuotes = await _context.Quotes
+                    .Join(_context.PortfolioItems.Where(p => p.UserId == userId),
+                          q => q.SecurityId,
+                          p => p.SecurityId,
+                          (q, p) => new { q.Date, Value = p.Quantity * q.Price })
+                    .OrderByDescending(x => x.Date)
+                    .Take(10)
+                    .OrderBy(x => x.Date)
+                    .Select(x => new HistoryPointDto { Date = x.Date, TotalValue = x.Value })
+                    .ToListAsync();
+
+                return Ok(latestQuotes);
+            }
 
             return Ok(history);
         }
