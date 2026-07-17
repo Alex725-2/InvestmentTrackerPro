@@ -1,0 +1,102 @@
+﻿@page "/profile"
+@using InvestmentTracker.Shared.Models
+@using Microsoft.Extensions.Localization
+@using InvestmentTracker.Client.Resources
+@inject HttpClient Http
+@inject IStringLocalizer<SharedResource> Localizer
+
+<h3>@Localizer["Profile"]</h3>
+
+@if (profile == null)
+{
+    <p>@Localizer["Loading"]</p>
+}
+else
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">@Localizer["PersonalInfo"]</h5>
+            <dl class="row">
+                <dt class="col-sm-3">@Localizer["Email"]</dt>
+                <dd class="col-sm-9">@profile.Email</dd>
+                <dt class="col-sm-3">@Localizer["FullName"]</dt>
+                <dd class="col-sm-9">@profile.FullName</dd>
+                <dt class="col-sm-3">@Localizer["LastLoginDate"]</dt>
+                <dd class="col-sm-9">@(profile.LastLoginDate?.ToString("dd.MM.yyyy HH:mm") ?? "—")</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">@Localizer["ChangePassword"]</h5>
+            <EditForm Model="changePasswordModel" OnValidSubmit="HandleChangePassword">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="form-group">
+                    <label>@Localizer["CurrentPassword"]</label>
+                    <InputText type="password" @bind-Value="changePasswordModel.CurrentPassword" class="form-control" />
+                    <ValidationMessage For="@(() => changePasswordModel.CurrentPassword)" />
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["NewPassword"]</label>
+                    <InputText type="password" @bind-Value="changePasswordModel.NewPassword" class="form-control" />
+                    <ValidationMessage For="@(() => changePasswordModel.NewPassword)" />
+                </div>
+
+                <button type="submit" class="btn btn-primary">@Localizer["Save"]</button>
+            </EditForm>
+
+            @if (!string.IsNullOrEmpty(passwordMessage))
+            {
+                <div class="alert @(passwordSuccess ? "alert-success" : "alert-danger") mt-3">@passwordMessage</div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private ProfileDto? profile;
+    private ChangePasswordDto changePasswordModel = new();
+    private string? passwordMessage;
+    private bool passwordSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            profile = await Http.GetFromJsonAsync<ProfileDto>("api/account/profile");
+        }
+        catch
+        {
+            profile = new ProfileDto { Email = "Ошибка загрузки", FullName = "" };
+        }
+    }
+
+    private async Task HandleChangePassword()
+    {
+        passwordMessage = null;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/account/change-password", changePasswordModel);
+            if (response.IsSuccessStatusCode)
+            {
+                passwordSuccess = true;
+                passwordMessage = "Пароль успешно изменён.";
+                changePasswordModel = new ChangePasswordDto();
+            }
+            else
+            {
+                passwordSuccess = false;
+                var error = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+                passwordMessage = error?.ContainsKey("message") == true ? error["message"] : "Ошибка при смене пароля.";
+            }
+        }
+        catch (Exception ex)
+        {
+            passwordSuccess = false;
+            passwordMessage = $"Ошибка: {ex.Message}";
+        }
+    }
+}
