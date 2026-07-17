@@ -40,6 +40,23 @@
                     {
                         <div class="alert alert-success mt-2">Токен скопирован в буфер обмена</div>
                     }
+                    <button class="btn btn-sm btn-outline-info ms-2" @onclick="RefreshSecurities" disabled="@isRefreshing">
+                        @(isRefreshing ? "Обновление..." : "Обновить типы")
+                    </button>
+                    @if (refreshResult != null)
+                    {
+                        <div class="alert alert-success alert-dismissible fade show mt-1">
+                            @refreshResult
+                            <button type="button" class="btn-close" @onclick="() => refreshResult = null"></button>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(refreshError))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show mt-1">
+                            @refreshError
+                            <button type="button" class="btn-close" @onclick="() => refreshError = null"></button>
+                        </div>
+                    }
                 </div>
             </div>
         }
@@ -343,6 +360,48 @@
             StateHasChanged();
             await Task.Delay(3000);
             copied = false;
+            StateHasChanged();
+        }
+    }
+    private string? refreshResult;
+
+   
+
+    private bool isRefreshing;
+   // private string? refreshResult;
+    private string? refreshError;
+
+    private async Task RefreshSecurities()
+    {
+        isRefreshing = true;
+        refreshResult = null;
+        refreshError = null;
+        StateHasChanged();
+
+        try
+        {
+            var response = await Http.PostAsync("api/securities/refresh-types", null);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<RefreshResult>();
+                refreshResult = $"Обновлено типов: {result?.Updated} из {result?.Total}";
+                if (result?.Errors?.Any() == true)
+                {
+                    refreshError = $"Ошибки по тикерам: {string.Join(", ", result.Errors)}";
+                }
+            }
+            else
+            {
+                refreshError = "Ошибка при обновлении типов";
+            }
+        }
+        catch (Exception ex)
+        {
+            refreshError = $"Ошибка: {ex.Message}";
+        }
+        finally
+        {
+            isRefreshing = false;
             StateHasChanged();
         }
     }

@@ -20,25 +20,20 @@ namespace InvestmentTracker.Server.Services
         // --------------------------------------------------
         public async Task<SecurityInfo?> LookupSecurityAsync(string ticker)
         {
-            // Акции
+            // Пробуем акции (TQBR), но смотрим на SECTYPE (может быть ПИФ/ETF)
             var info = await GetSecurityInfoFromMarketAsync(ticker, "shares", "TQBR");
             if (info != null) return info;
 
-            // Облигации: пробуем оба основных борда
+            // Облигации
             info = await GetSecurityInfoFromMarketAsync(ticker, "bonds", "TQCB");
             if (info != null) return info;
-
             info = await GetSecurityInfoFromMarketAsync(ticker, "bonds", "TQOB");
             if (info != null) return info;
 
-            // Паи ПИФов
+            // Паи ПИФов (специализированный борд)
             info = await GetSecurityInfoFromMarketAsync(ticker, "shares", "TQTF");
             if (info != null) return info;
-
-            // ETF (дополнительно)
-            info = await GetSecurityInfoFromMarketAsync(ticker, "shares", "TQTF");
-            if (info != null) return info;
-
+            _logger.LogWarning("LookupSecurityAsync: ticker={Ticker} not found on any market", ticker);
             return null;
         }
 
@@ -70,16 +65,27 @@ namespace InvestmentTracker.Server.Services
                 string? isin = isinIdx >= 0 ? row[isinIdx].GetString() : null;
                 string? name = row[nameIdx].GetString();
                 string? secType = secTypeIdx >= 0 ? row[secTypeIdx].GetString() : null;
+                _logger.LogInformation("Ticker={Ticker}, market={Market}, board={Board}, SECTYPE={SecType}",
+    ticker, market, board, secType);
+                int? assetTypeIdlog = MapSecTypeToAssetTypeId(secType) ?? (market == "bonds" ? 2 : null);
+                _logger.LogInformation("Computed AssetTypeId={AssetTypeIdlog}", assetTypeIdlog);
 
                 if (string.IsNullOrWhiteSpace(secid) || string.IsNullOrWhiteSpace(name))
                     return null;
 
-                // Определяем AssetTypeId по SECTYPE, если есть, иначе по рынку
-                int? assetTypeId = MapSecTypeToAssetTypeId(secType) ?? market switch
+                // Определяем тип по SECTYPE в первую очередь
+                int? assetTypeId = MapSecTypeToAssetTypeId(secType);
+
+                // Если по SECTYPE не определили, пробуем угадать по рынку (запасной вариант)
+                if (assetTypeId == null)
                 {
-                    "bonds" => 2,
-                    _ => null
-                };
+                    assetTypeId = market switch
+                    {
+                        "bonds" => 2,
+                        "shares" => board == "TQTF" ? 3 : 1, // если TQTF – паи, иначе акция (но это неточно)
+                        _ => null
+                    };
+                }
 
                 return new SecurityInfo
                 {
@@ -104,6 +110,7 @@ namespace InvestmentTracker.Server.Services
                 "2" => 2, // Облигация
                 "9" => 3, // ПИФ
                 "E" => 4, // ETF
+                "J" => 4, // ETF (альтернативный код)
                 _ => null
             };
         }
@@ -231,21 +238,22 @@ namespace InvestmentTracker.Server.Services
             };
         }
 
-        // --------------------------------------------------
-        // ПОЛУЧЕНИЕ ТЕКУЩЕЙ ЦЕНЫ (только для акций, TQBR)
-        // --------------------------------------------------
+      
         public async Task<decimal?> GetCurrentPriceAsync(string ticker)
         {
-            // Пробуем акции (TQBR)
-            var price = await GetPriceFromBoardAsync(ticker, "shares", "TQBR");
+            // Пробуем все рынки по очереди
+            var price = await GetPriceFromBoardAsync(ticker, "shares", "TQBR"); // Акции
             if (price.HasValue) return price;
 
-            // Пробуем облигации (TQCB, TQOB)
-            price = await GetPriceFromBoardAsync(ticker, "bonds", "TQCB");
+            price = await GetPriceFromBoardAsync(ticker, "bonds", "TQCB"); // Облигации
             if (price.HasValue) return price;
+
+            price = await GetPriceFromBoardAsync(ticker, "shares", "TQTF"); // ПИФы
+            if (price.HasValue) return price;
+
 
             price = await GetPriceFromBoardAsync(ticker, "bonds", "TQOB");
-            return price; // null, если не найдено
+            return price;
         }
 
         private async Task<decimal?> GetPriceFromBoardAsync(string ticker, string market, string board)

@@ -101,24 +101,40 @@
             var query = searchText.ToUpperInvariant();
             bool isIsin = query.Length == 12 && !query.Contains(" ");
             var response = await Http.GetAsync($"api/securities/lookup?{(isIsin ? "isin" : "ticker")}={query}");
+
             if (response.IsSuccessStatusCode)
             {
                 var security = await response.Content.ReadFromJsonAsync<SecurityDto>();
                 if (security != null)
                 {
+                    // Проверяем, существует ли уже в локальном списке (загруженных бумагах)
                     var existing = await Http.GetFromJsonAsync<List<SecurityDto>>("api/securities");
                     var already = existing?.FirstOrDefault(s => s.Ticker == security.Ticker);
+
                     if (already == null)
                     {
+                        // Пытаемся добавить
                         var addResponse = await Http.PostAsJsonAsync("api/securities", security);
                         if (addResponse.IsSuccessStatusCode)
                         {
                             security = await addResponse.Content.ReadFromJsonAsync<SecurityDto>();
+                            // Успешно добавили
+                        }
+                        else
+                        {
+                            var errMsg = await addResponse.Content.ReadAsStringAsync();
+                            error = $"Не удалось добавить бумагу: {errMsg}";
+                            isAdding = false;
+                            return;
                         }
                     }
-                    else security = already;
-                    await OnSecuritySelected.InvokeAsync(security);
+                    else
+                    {
+                        security = already;
+                    }
+
                     selectedSecurity = security;
+                    await OnSecuritySelected.InvokeAsync(security);
                     searchText = security.Ticker;
                     suggestions = null;
                     error = null;
@@ -131,7 +147,7 @@
         }
         catch (Exception ex)
         {
-            error = $"Error: {ex.Message}";
+            error = $"Ошибка: {ex.Message}";
         }
         finally
         {

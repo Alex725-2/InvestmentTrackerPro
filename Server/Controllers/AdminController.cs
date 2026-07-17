@@ -13,25 +13,28 @@ namespace InvestmentTracker.Server.Controllers
     public class AdminController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly SecuritiesSyncService _securitiesSyncService;
+        private readonly IServiceProvider _serviceProvider;
 
-        public AdminController(UserManager<ApplicationUser> userManager, SecuritiesSyncService securitiesSyncService)
+        public AdminController(UserManager<ApplicationUser> userManager, IServiceProvider serviceProvider)
         {
             _userManager = userManager;
-            _securitiesSyncService = securitiesSyncService;
+            _serviceProvider = serviceProvider;
         }
 
         [HttpGet("users")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<List<UserDto>>> GetUsers()
         {
-            var users = await _userManager.Users.Select(u => new UserDto
-            {
-                Id = u.Id,
-                Email = u.Email ?? string.Empty,
-                FullName = u.FullName ?? string.Empty,
-                LastLoginDate = u.LastLoginDate
-            }).ToListAsync();
+            var users = await _userManager.Users
+                .OrderBy(u => u.Email)
+                .Select(u => new UserDto
+                {
+                    Id = u.Id,
+                    Email = u.Email ?? string.Empty,
+                    FullName = u.FullName ?? string.Empty,
+                    LastLoginDate = u.LastLoginDate
+                })
+                .ToListAsync();
 
             return Ok(users);
         }
@@ -40,7 +43,11 @@ namespace InvestmentTracker.Server.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> SyncSecurities()
         {
-            await _securitiesSyncService.SyncSecuritiesAsync();
+            var syncService = _serviceProvider.GetService<SecuritiesSyncService>();
+            if (syncService == null)
+                return BadRequest("SecuritiesSyncService не зарегистрирован. Синхронизация недоступна.");
+
+            await syncService.SyncSecuritiesAsync();
             return Ok("Sync completed");
         }
     }

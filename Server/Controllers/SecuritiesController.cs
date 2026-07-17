@@ -39,6 +39,36 @@ namespace InvestmentTracker.Server.Controllers
             return Ok(securities);
         }
 
+        [HttpPost("refresh-types")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RefreshSecurityTypes()
+        {
+            var moexService = HttpContext.RequestServices.GetRequiredService<Services.MoexService>();
+            var securities = await _context.Securities.ToListAsync();
+            int updated = 0;
+            var errors = new List<string>();
+
+            foreach (var sec in securities)
+            {
+                try
+                {
+                    var info = await moexService.LookupSecurityAsync(sec.Ticker);
+                    if (info?.AssetTypeId != null && sec.AssetTypeId != info.AssetTypeId)
+                    {
+                        sec.AssetTypeId = info.AssetTypeId.Value;
+                        updated++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"{sec.Ticker}: {ex.Message}");
+                }
+            }
+
+            if (updated > 0) await _context.SaveChangesAsync();
+            return Ok(new { Updated = updated, Total = securities.Count, Errors = errors.Take(10) });
+        }
+
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<ActionResult<SecurityDto>> GetById(int id)
@@ -125,7 +155,6 @@ namespace InvestmentTracker.Server.Controllers
         }
 
         [HttpPost]
-        [Authorize(Roles = "Admin")]   // только админ может добавить бумагу
         public async Task<ActionResult<SecurityDto>> Create(SecurityDto dto)
         {
             dto.Ticker = dto.Ticker.Trim().ToUpperInvariant();
@@ -135,6 +164,12 @@ namespace InvestmentTracker.Server.Controllers
             if (existing != null)
             {
                 return Conflict($"Security with ticker '{dto.Ticker}' already exists.");
+            }
+
+            // Проверяем, что AssetTypeId ссылается на существующий тип
+            if (dto.AssetTypeId <= 0 || !await _context.AssetTypes.AnyAsync(a => a.Id == dto.AssetTypeId))
+            {
+                return BadRequest($"Невозможно определить тип бумаги. Пожалуйста, выберите тип вручную.");
             }
 
             var security = new Security
@@ -149,7 +184,7 @@ namespace InvestmentTracker.Server.Controllers
             await _context.SaveChangesAsync();
 
             dto.Id = security.Id;
-            dto.AssetTypeName = (await _context.AssetTypes.FindAsync(dto.AssetTypeId))?.Name;
+            dto.AssetTypeName = (await _context.AssetTypes.FindAsync(security.AssetTypeId))?.Name;
 
             return CreatedAtAction(nameof(GetById), new { id = security.Id }, dto);
         }

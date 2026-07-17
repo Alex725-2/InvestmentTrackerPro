@@ -125,10 +125,14 @@ builder.Services.AddHttpClient<MoexService>();
 builder.Services.AddScoped<QuoteUpdateService>();
 
 // ‘оновое обновление котировок (вместо Hangfire дл€ Production)
-builder.Services.AddHostedService<QuoteBackgroundService>();
+if (!builder.Environment.IsDevelopment()) // или builder.Environment.IsProduction()
+{
+    builder.Services.AddHostedService<QuoteBackgroundService>();
+    builder.Services.AddHostedService<DividendUpdateService>();
+    builder.Services.AddHostedService<SecuritiesSyncService>();
+    // и другие сервисы, которые не нужны при разработке
+}
 
-builder.Services.AddHostedService<SecuritiesSyncService>();
-builder.Services.AddHostedService<DividendUpdateService>();
 var app = builder.Build();
 
 // ѕрименение миграций (автоматически) и создание базы данных при необходимости
