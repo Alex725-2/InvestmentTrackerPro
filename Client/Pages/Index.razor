@@ -35,28 +35,29 @@
                         <a href="/swagger" target="_blank" class="btn btn-sm btn-outline-primary ms-2">@Localizer["Swagger"]</a>
                         <a href="/admin/users" class="btn btn-sm btn-outline-primary ms-2">@Localizer["AdminUsers"]</a>
                         <button class="btn btn-sm btn-outline-secondary ms-2" @onclick="CopyToken">@Localizer["CopyToken"]</button>
+                        <button class="btn btn-sm btn-outline-info ms-2" @onclick="RefreshSecurities" disabled="@isRefreshing">
+                            @(isRefreshing ? "Обновление..." : "Обновить типы")
+                        </button>
+                        @if (refreshResult != null)
+                        {
+                            <div class="alert alert-success alert-dismissible fade show mt-1">
+                                @refreshResult
+                                <button type="button" class="btn-close" @onclick="() => refreshResult = null"></button>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(refreshError))
+                        {
+                            <div class="alert alert-danger alert-dismissible fade show mt-1">
+                                @refreshError
+                                <button type="button" class="btn-close" @onclick="() => refreshError = null"></button>
+                            </div>
+                        }
                     </div>
                     @if (copied)
                     {
                         <div class="alert alert-success mt-2">Токен скопирован в буфер обмена</div>
                     }
-                    <button class="btn btn-sm btn-outline-info ms-2" @onclick="RefreshSecurities" disabled="@isRefreshing">
-                        @(isRefreshing ? "Обновление..." : "Обновить типы")
-                    </button>
-                    @if (refreshResult != null)
-                    {
-                        <div class="alert alert-success alert-dismissible fade show mt-1">
-                            @refreshResult
-                            <button type="button" class="btn-close" @onclick="() => refreshResult = null"></button>
-                        </div>
-                    }
-                    @if (!string.IsNullOrEmpty(refreshError))
-                    {
-                        <div class="alert alert-danger alert-dismissible fade show mt-1">
-                            @refreshError
-                            <button type="button" class="btn-close" @onclick="() => refreshError = null"></button>
-                        </div>
-                    }
+                 
                 </div>
             </div>
         }
@@ -380,7 +381,21 @@
 
         try
         {
-            var response = await Http.PostAsync("api/securities/refresh-types", null);
+            // Создаём отдельный HttpClient с большим таймаутом
+            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
+            // Копируем базовый адрес из основного HttpClient (если настроен)
+            client.BaseAddress = new Uri(Navigation.BaseUri);
+
+            // Копируем токен авторизации, если есть
+            var token = await AuthService.GetToken();
+            if (!string.IsNullOrEmpty(token))
+            {
+                client.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+
+            var response = await client.PostAsync("api/securities/refresh-types", null);
+
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<RefreshResult>();
@@ -392,8 +407,13 @@
             }
             else
             {
-                refreshError = "Ошибка при обновлении типов";
+                var errorMsg = await response.Content.ReadAsStringAsync();
+                refreshError = $"Ошибка при обновлении типов: {errorMsg}";
             }
+        }
+        catch (TaskCanceledException) // таймаут или отмена
+        {
+            refreshError = "Обновление типов заняло слишком много времени и было прервано. Попробуйте позже.";
         }
         catch (Exception ex)
         {
