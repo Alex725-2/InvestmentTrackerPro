@@ -128,10 +128,13 @@ builder.Services.AddScoped<QuoteUpdateService>();
 if (!builder.Environment.IsDevelopment()) // или builder.Environment.IsProduction()
 {
     builder.Services.AddHostedService<QuoteBackgroundService>();
-    builder.Services.AddHostedService<DividendUpdateService>();
+    
     builder.Services.AddHostedService<SecuritiesSyncService>();
     // и другие сервисы, которые не нужны при разработке
 }
+
+builder.Services.AddHostedService<DividendUpdateService>();
+builder.Services.AddScoped<DividendLoaderService>();
 
 var app = builder.Build();
 

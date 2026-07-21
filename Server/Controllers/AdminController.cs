@@ -50,5 +50,18 @@ namespace InvestmentTracker.Server.Controllers
             await syncService.SyncSecuritiesAsync();
             return Ok("Sync completed");
         }
+
+        [HttpPost("load-dividends")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> LoadDividends([FromBody] LoadDividendsRequest request)
+        {
+            if (request.Year <= 0 || request.Month < 1 || request.Month > 12)
+                return BadRequest("Некорректные год или месяц.");
+
+            var loader = _serviceProvider.GetRequiredService<DividendLoaderService>();
+            int added = await loader.LoadDividendsForMonthAsync(request.Year, request.Month);
+
+            return Ok(new { Added = added, Month = request.Month, Year = request.Year });
+        }
     }
 }

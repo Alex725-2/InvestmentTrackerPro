@@ -157,5 +157,11 @@
 <data name="NewPassword" xml:space="preserve"><value>Новый пароль</value></data>
 <data name="EditProfile" xml:space="preserve"><value>Редактировать имя</value></data>
 <data name="Cancel" xml:space="preserve"><value>Отмена</value></data>
+
+<data name="AdminPanel" xml:space="preserve"><value>Админ-панель</value></data>
+<data name="LoadDividends" xml:space="preserve"><value>Загрузка дивидендов</value></data>
+<data name="Month" xml:space="preserve"><value>Месяц</value></data>
+<data name="Year" xml:space="preserve"><value>Год</value></data>
+<data name="Load" xml:space="preserve"><value>Загрузить</value></data>
   
 </root>
