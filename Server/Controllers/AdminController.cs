@@ -63,5 +63,14 @@ namespace InvestmentTracker.Server.Controllers
 
             return Ok(new { Added = added, Month = request.Month, Year = request.Year });
         }
+
+        [HttpPost("load-bonds")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> LoadBonds()
+        {
+            var loader = _serviceProvider.GetRequiredService<BondLoaderService>();
+            int added = await loader.LoadBondsAsync(); // по умолчанию TQCB и TQOB
+            return Ok(new { Added = added });
+        }
     }
 }

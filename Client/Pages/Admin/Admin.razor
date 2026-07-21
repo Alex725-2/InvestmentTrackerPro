@@ -1,6 +1,5 @@
 ﻿@page "/admin"
 @using InvestmentTracker.Client.Services
-@using InvestmentTracker.Shared.Models
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.Extensions.Localization
 @using InvestmentTracker.Client.Resources
@@ -12,6 +11,7 @@
 
 <h3>@Localizer["AdminPanel"]</h3>
 
+<!-- Загрузка дивидендов -->
 <div class="card mb-4">
     <div class="card-body">
         <h5>@Localizer["LoadDividends"]</h5>
@@ -30,20 +30,41 @@
                 <input @bind="selectedYear" type="number" class="form-control" min="2000" max="2100" />
             </div>
             <div class="col-md-4 d-flex align-items-end">
-                <button class="btn btn-primary w-100" @onclick="LoadDividends" disabled="@isLoading">
-                    @(isLoading? Localizer["Loading"] : Localizer["Load"])
+                <button class="btn btn-primary w-100" @onclick="LoadDividends" disabled="@isDividendsLoading">
+                    @(isDividendsLoading? Localizer["Loading"] : Localizer["Load"])
                 </button>
             </div>
         </div>
-        @if (isLoading)
+        @if (isDividendsLoading)
         {
             <div class="progress mt-2">
                 <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
             </div>
         }
-        @if (!string.IsNullOrEmpty(message))
+        @if (!string.IsNullOrEmpty(dividendMessage))
         {
-            <div class="alert @(isError ? "alert-danger" : "alert-success") mt-3">@message</div>
+            <div class="alert @(dividendIsError ? "alert-danger" : "alert-success") mt-3">@dividendMessage</div>
+        }
+    </div>
+</div>
+
+<!-- Загрузка облигаций -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h5>@Localizer["LoadBonds"]</h5>
+        <p>@Localizer["LoadBondsDescription"]</p>
+        <button class="btn btn-primary" @onclick="LoadBonds" disabled="@isBondsLoading">
+            @(isBondsLoading? Localizer["Loading"] : Localizer["LoadBondsButton"])
+        </button>
+        @if (isBondsLoading)
+        {
+            <div class="progress mt-2">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(bondsMessage))
+        {
+            <div class="alert @(bondsIsError ? "alert-danger" : "alert-success") mt-3">@bondsMessage</div>
         }
     </div>
 </div>
@@ -51,23 +72,25 @@
 @code {
     private int selectedMonth = DateTime.Now.Month;
     private int selectedYear = DateTime.Now.Year;
-    private bool isLoading;
-    private string? message;
-    private bool isError;
+    private bool isDividendsLoading;
+    private string? dividendMessage;
+    private bool dividendIsError;
+
+    private bool isBondsLoading;
+    private string? bondsMessage;
+    private bool bondsIsError;
 
     private async Task LoadDividends()
     {
-        isLoading = true;
-        message = null;
-        isError = false;
+        isDividendsLoading = true;
+        dividendMessage = null;
+        dividendIsError = false;
         StateHasChanged();
 
         try
         {
-            // Используем HttpClient с большим таймаутом (5 минут)
             using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
             client.BaseAddress = new Uri(Navigation.BaseUri);
-            // Копируем токен
             var token = await AuthService.GetToken();
             if (!string.IsNullOrEmpty(token))
                 client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
@@ -78,33 +101,78 @@
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<LoadResult>();
-                message = $"Загружено {result?.Added ?? 0} дивидендов за {result?.Month}/{result?.Year}";
+                dividendMessage = $"Загружено {result?.Added ?? 0} дивидендов за {result?.Month}/{result?.Year}";
             }
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                message = $"Ошибка: {errorContent}";
-                isError = true;
+                dividendMessage = $"Ошибка: {errorContent}";
+                dividendIsError = true;
             }
         }
         catch (TaskCanceledException)
         {
-            message = "Загрузка прервана (таймаут). Попробуйте ещё раз.";
-            isError = true;
+            dividendMessage = "Загрузка прервана (таймаут). Попробуйте ещё раз.";
+            dividendIsError = true;
         }
         catch (Exception ex)
         {
-            message = $"Ошибка: {ex.Message}";
-            isError = true;
+            dividendMessage = $"Ошибка: {ex.Message}";
+            dividendIsError = true;
         }
         finally
         {
-            isLoading = false;
+            isDividendsLoading = false;
             StateHasChanged();
         }
     }
 
-    // Вспомогательный класс для десериализации ответа
+    private async Task LoadBonds()
+    {
+        isBondsLoading = true;
+        bondsMessage = null;
+        bondsIsError = false;
+        StateHasChanged();
+
+        try
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
+            client.BaseAddress = new Uri(Navigation.BaseUri);
+            var token = await AuthService.GetToken();
+            if (!string.IsNullOrEmpty(token))
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await client.PostAsync("api/admin/load-bonds", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<LoadResult>();
+                bondsMessage = $"Добавлено облигаций: {result?.Added ?? 0}";
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                bondsMessage = $"Ошибка: {errorContent}";
+                bondsIsError = true;
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            bondsMessage = "Загрузка прервана (таймаут). Попробуйте ещё раз.";
+            bondsIsError = true;
+        }
+        catch (Exception ex)
+        {
+            bondsMessage = $"Ошибка: {ex.Message}";
+            bondsIsError = true;
+        }
+        finally
+        {
+            isBondsLoading = false;
+            StateHasChanged();
+        }
+    }
+
     private class LoadResult
     {
         public int Added { get; set; }

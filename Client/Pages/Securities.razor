@@ -8,6 +8,25 @@
 
 <h3>@Localizer["Securities"]</h3>
 
+@* --- Фильтры --- *@
+<div class="row mb-3">
+    <div class="col-md-3">
+        <label class="form-label">@Localizer["AssetType"]</label>
+        <select @bind="selectedAssetTypeId" class="form-select">
+            <option value="">@Localizer["All"]</option>
+            @foreach (var type in assetTypes)
+            {
+                <option value="@type.Id">@type.Name</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">@Localizer["Search"]</label>
+        <input @bind="searchText" @bind:event="oninput" class="form-control" placeholder="@Localizer["SearchPlaceholder"]" />
+    </div>
+</div>
+
+@* --- Список бумаг --- *@
 @if (securities == null)
 {
     <p>@Localizer["Loading"]</p>
@@ -29,7 +48,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var sec in securities)
+            @foreach (var sec in filteredSecurities)
             {
                 <tr>
                     <td>@sec.Ticker</td>
@@ -43,6 +62,7 @@ else
             }
         </tbody>
     </table>
+    <div class="text-muted">@Localizer["Total"]: @filteredSecurities.Count</div>
 }
 
 <button class="btn btn-success mt-2" @onclick="NavigateToCreate">@Localizer["AddSecurity"]</button>
@@ -51,9 +71,26 @@ else
     private List<SecurityDto>? securities;
     private string? errorMessage;
 
+    // Фильтры
+    private string selectedAssetTypeId = "";
+    private string searchText = "";
+    private List<AssetTypeDto>? assetTypes;
+
+    // Результат фильтрации
+    private List<SecurityDto> filteredSecurities => string.IsNullOrWhiteSpace(searchText) && string.IsNullOrEmpty(selectedAssetTypeId)
+        ? (securities ?? new())
+        : (securities ?? new()).Where(s =>
+            (string.IsNullOrEmpty(selectedAssetTypeId) || s.AssetTypeId.ToString() == selectedAssetTypeId) &&
+            (string.IsNullOrWhiteSpace(searchText) ||
+                (s.Ticker?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true) ||
+                (s.Isin?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true) ||
+                (s.Name?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true))
+        ).ToList();
+
     protected override async Task OnInitializedAsync()
     {
         await LoadSecurities();
+        await LoadAssetTypes();
     }
 
     private async Task LoadSecurities()
@@ -67,6 +104,18 @@ else
         {
             securities = new();
             errorMessage = $"Ошибка загрузки: {ex.Message}";
+        }
+    }
+
+    private async Task LoadAssetTypes()
+    {
+        try
+        {
+            assetTypes = await Http.GetFromJsonAsync<List<AssetTypeDto>>("api/assettypes") ?? new();
+        }
+        catch
+        {
+            assetTypes = new();
         }
     }
 

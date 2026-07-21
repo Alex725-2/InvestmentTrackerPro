@@ -163,5 +163,14 @@
 <data name="Month" xml:space="preserve"><value>Месяц</value></data>
 <data name="Year" xml:space="preserve"><value>Год</value></data>
 <data name="Load" xml:space="preserve"><value>Загрузить</value></data>
+
+<data name="LoadBonds" xml:space="preserve"><value>Загрузка облигаций</value></data>
+<data name="LoadBondsDescription" xml:space="preserve"><value>Загрузить все облигации с MOEX (TQCB и TQOB).</value></data>
+<data name="LoadBondsButton" xml:space="preserve"><value>Загрузить облигации</value></data>
+
+<data name="All" xml:space="preserve"><value>Все</value></data>
+<data name="Search" xml:space="preserve"><value>Поиск</value></data>
+<data name="SearchPlaceholder" xml:space="preserve"><value>Введите тикер, ISIN или название...</value></data>
+<data name="Total" xml:space="preserve"><value>Всего</value></data>
   
 </root>
