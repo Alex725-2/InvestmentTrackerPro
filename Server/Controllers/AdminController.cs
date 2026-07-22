@@ -24,6 +24,87 @@ namespace InvestmentTracker.Server.Controllers
             return Ok(new { Deleted = all.Count });
         }
 
+        [HttpPost("debug-bond-by-isin")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DebugBondByIsin([FromBody] DebugBondRequest request)
+        {
+            var moex = _serviceProvider.GetRequiredService<MoexService>();
+            var context = _serviceProvider.GetRequiredService<ApplicationDbContext>();
+
+            // Ищем бумагу по ISIN
+            var bond = await context.Securities.FirstOrDefaultAsync(s => s.Isin == request.Isin || s.Ticker == request.Isin);
+            if (bond == null)
+                return BadRequest($"Бумага с ISIN/Ticker '{request.Isin}' не найдена в справочнике.");
+
+            var info = await moex.GetBondPaymentInfoAsync(bond.Ticker);
+            if (info == null)
+                return Ok(new { Message = "Не удалось получить параметры облигации с MOEX." });
+
+            // Удаляем старые будущие купоны/амортизации для этой бумаги
+            var oldEvents = await context.PaymentEvents
+                .Where(e => e.SecurityId == bond.Id && e.Date >= DateTime.Today &&
+                           (e.Type == "Coupon" || e.Type == "Amortization"))
+                .ToListAsync();
+            context.PaymentEvents.RemoveRange(oldEvents);
+
+            int coupons = 0, amorts = 0;
+
+            // Генерируем купоны
+            if (info.NextCouponDate.HasValue && info.CouponValue.HasValue && info.CouponFrequency.HasValue)
+            {
+                var date = info.NextCouponDate.Value;
+                var endDate = info.MaturityDate ?? date.AddYears(10);
+                int monthsStep = 12 / info.CouponFrequency.Value;
+
+                bool first = true;
+                while (date <= endDate)
+                {
+                    context.PaymentEvents.Add(new PaymentEvent
+                    {
+                        Ticker = bond.Ticker,
+                        SecurityId = bond.Id,
+                        Date = date,
+                        AmountPerUnit = info.CouponValue.Value,
+                        Currency = info.Currency,
+                        Type = "Coupon",
+                        IsEstimated = !first
+                    });
+                    coupons++;
+                    first = false;
+                    date = date.AddMonths(monthsStep);
+                }
+            }
+
+            // Генерируем амортизацию
+            if (info.MaturityDate.HasValue && info.FaceValue.HasValue)
+            {
+                context.PaymentEvents.Add(new PaymentEvent
+                {
+                    Ticker = bond.Ticker,
+                    SecurityId = bond.Id,
+                    Date = info.MaturityDate.Value,
+                    AmountPerUnit = info.FaceValue.Value,
+                    Currency = info.Currency,
+                    Type = "Amortization",
+                    IsEstimated = false
+                });
+                amorts++;
+            }
+
+            await context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                Bond = bond.Ticker,
+                CouponsAdded = coupons,
+                AmortizationsAdded = amorts,
+                NextCouponDate = info.NextCouponDate?.ToString("yyyy-MM-dd"),
+                CouponValue = info.CouponValue,
+                Frequency = info.CouponFrequency,
+                MaturityDate = info.MaturityDate?.ToString("yyyy-MM-dd"),
+                FaceValue = info.FaceValue
+            });
+        }
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IServiceProvider _serviceProvider;
 
@@ -138,6 +219,7 @@ namespace InvestmentTracker.Server.Controllers
         public class DebugBondRequest
         {
             public string Ticker { get; set; } = string.Empty;
+            public string Isin { get; set; } = string.Empty;
         }
 
         [HttpPost("test-email")]

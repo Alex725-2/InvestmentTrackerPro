@@ -1,6 +1,8 @@
 ﻿using InvestmentTracker.Shared.Models;
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Globalization;
 
 namespace InvestmentTracker.Server.Services
 {
@@ -801,23 +803,23 @@ namespace InvestmentTracker.Server.Services
                     switch (name)
                     {
                         case "COUPONDATE":
-                            if (DateTime.TryParse(value, out var cd) && cd >= DateTime.Today)
+                            if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var cd) && cd >= DateTime.Today)
                                 info.NextCouponDate = cd;
                             break;
                         case "COUPONVALUE":
-                            if (decimal.TryParse(value, out var cv))
+                            if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var cv))
                                 info.CouponValue = cv;
                             break;
                         case "COUPONFREQUENCY":
-                            if (int.TryParse(value, out var freq))
+                            if (int.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var freq))
                                 info.CouponFrequency = freq;
                             break;
                         case "MATDATE":
-                            if (DateTime.TryParse(value, out var md) && md >= DateTime.Today)
+                            if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var md) && md >= DateTime.Today)
                                 info.MaturityDate = md;
                             break;
                         case "FACEVALUE":
-                            if (decimal.TryParse(value, out var fv))
+                            if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var fv))
                                 info.FaceValue = fv;
                             break;
                         case "FACEUNIT":

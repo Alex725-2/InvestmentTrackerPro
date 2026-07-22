@@ -50,7 +50,7 @@ namespace InvestmentTracker.Server.Services
                 }
 
                 // Следующее обновление через 24 часа
-                await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
+                await Task.Delay(TimeSpan.FromHours(12), stoppingToken);
             }
         }
     }

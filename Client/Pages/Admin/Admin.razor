@@ -142,6 +142,24 @@
             }
         </div>
     </div>
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5>Диагностика по ISIN (загрузить купоны/амортизации для конкретной бумаги)</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <label>ISIN или тикер</label>
+                    <input @bind="debugIsin" class="form-control" placeholder="RU000A10CU55" />
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-secondary" @onclick="DebugBondByIsin">Загрузить</button>
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(debugBondResult))
+            {
+                <pre class="mt-2 bg-light p-2">@debugBondResult</pre>
+            }
+        </div>
+    </div>
 </div>
 
 @code {
@@ -170,6 +188,37 @@
     private bool isClearing;
     private string? clearPaymentsMessage;
     private bool clearPaymentsSuccess;
+    private string debugIsin = "";
+    private string? debugBondResult;
+
+    private async Task DebugBondByIsin()
+    {
+        debugBondResult = null;
+        StateHasChanged();
+        try
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+            client.BaseAddress = new Uri(Navigation.BaseUri);
+            var token = await AuthService.GetToken();
+            if (!string.IsNullOrEmpty(token))
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await client.PostAsJsonAsync("api/admin/debug-bond-by-isin", new { Isin = debugIsin });
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadAsStringAsync();
+                debugBondResult = result;
+            }
+            else
+            {
+                debugBondResult = $"Ошибка: {await response.Content.ReadAsStringAsync()}";
+            }
+        }
+        catch (Exception ex)
+        {
+            debugBondResult = $"Ошибка: {ex.Message}";
+        }
+    }
 
     private async Task ClearPayments()
     {
