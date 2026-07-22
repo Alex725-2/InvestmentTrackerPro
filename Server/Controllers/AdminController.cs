@@ -1,4 +1,5 @@
-﻿using InvestmentTracker.Server.Models;
+﻿using InvestmentTracker.Server.Data;
+using InvestmentTracker.Server.Models;
 using InvestmentTracker.Server.Services;
 using InvestmentTracker.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -64,6 +65,15 @@ namespace InvestmentTracker.Server.Controllers
             return Ok(new { Added = added, Month = request.Month, Year = request.Year });
         }
 
+        [HttpPost("load-bond-payments")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> LoadBondPayments()
+        {
+            var loader = _serviceProvider.GetRequiredService<BondPaymentLoaderService>();
+            var result = await loader.LoadAllAsync();
+            return Ok(new { CouponsAdded = result.coupons, AmortizationsAdded = result.amortizations });
+        }
+
         [HttpPost("load-bonds")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> LoadBonds()
@@ -71,6 +81,36 @@ namespace InvestmentTracker.Server.Controllers
             var loader = _serviceProvider.GetRequiredService<BondLoaderService>();
             int added = await loader.LoadBondsAsync(); // по умолчанию TQCB и TQOB
             return Ok(new { Added = added });
+        }
+
+        [HttpPost("debug-bond")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DebugBond([FromBody] DebugBondRequest request)
+        {
+            var moex = _serviceProvider.GetRequiredService<MoexService>();
+            var context = _serviceProvider.GetRequiredService<ApplicationDbContext>();
+
+            var bond = await context.Securities.FirstOrDefaultAsync(s => s.Ticker == request.Ticker);
+            if (bond == null)
+                return BadRequest($"Облигация {request.Ticker} не найдена в справочнике.");
+
+            var coupons = await moex.GetCouponsAsync(request.Ticker);
+            var amorts = await moex.GetAmortizationsAsync(request.Ticker);
+
+            return Ok(new
+            {
+                Bond = bond.Ticker,
+                CouponCount = coupons.Count,
+                AmortCount = amorts.Count,
+                SampleCoupon = coupons.Take(3).Select(c => new { c.Date, c.Amount, c.Currency }),
+                SampleAmort = amorts.Take(3).Select(a => new { a.Date, a.Amount, a.Currency })
+            });
+        }
+
+        // DTO для запроса
+        public class DebugBondRequest
+        {
+            public string Ticker { get; set; } = string.Empty;
         }
     }
 }

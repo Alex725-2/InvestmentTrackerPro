@@ -172,5 +172,9 @@
 <data name="Search" xml:space="preserve"><value>Поиск</value></data>
 <data name="SearchPlaceholder" xml:space="preserve"><value>Введите тикер, ISIN или название...</value></data>
 <data name="Total" xml:space="preserve"><value>Всего</value></data>
+
+<data name="LoadBondPayments" xml:space="preserve"><value>Загрузка купонов и амортизаций</value></data>
+<data name="LoadBondPaymentsDesc" xml:space="preserve"><value>Загрузить купоны и амортизации для всех облигаций из справочника. Может занять длительное время.</value></data>
+<data name="LoadBondPaymentsButton" xml:space="preserve"><value>Загрузить купоны/амортизации</value></data>
   
 </root>

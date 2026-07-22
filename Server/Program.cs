@@ -136,6 +136,7 @@ if (!builder.Environment.IsDevelopment()) // или builder.Environment.IsProductio
 builder.Services.AddHostedService<DividendUpdateService>();
 builder.Services.AddScoped<DividendLoaderService>();
 builder.Services.AddScoped<BondLoaderService>();
+builder.Services.AddScoped<BondPaymentLoaderService>();
 
 var app = builder.Build();
 

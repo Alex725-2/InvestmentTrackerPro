@@ -15,6 +15,206 @@ namespace InvestmentTracker.Server.Services
             _logger = logger;
         }
 
+        public async Task<List<(DateTime Date, decimal Amount, string Currency)>> GetCouponsAsync(string ticker)
+        {
+            var result = new List<(DateTime, decimal, string)>();
+            try
+            {
+                var url = $"https://iss.moex.com/iss/securities/{ticker.ToUpper()}/coupons.json";
+                _logger.LogInformation("Fetching coupons for {Ticker}, URL: {Url}", ticker, url);
+                using var stream = await _httpClient.GetStreamAsync(url);
+                using var doc = await JsonDocument.ParseAsync(stream);
+
+                var root = doc.RootElement;
+                if (!root.TryGetProperty("coupons", out var coupons))
+                {
+                    _logger.LogWarning("No 'coupons' block for {Ticker}", ticker);
+                    return result;
+                }
+
+                if (!coupons.TryGetProperty("data", out var data) || data.GetArrayLength() == 0)
+                {
+                    _logger.LogInformation("No coupon data for {Ticker}", ticker);
+                    return result;
+                }
+
+                var columns = coupons.GetProperty("columns");
+                int dateIdx = FindColumnIndex(columns, "coupondate");
+                int valueIdx = FindColumnIndex(columns, "value");
+                int currencyIdx = FindColumnIndex(columns, "currencyid");
+
+                if (dateIdx == -1 || valueIdx == -1)
+                {
+                    _logger.LogWarning("Required columns not found for {Ticker}", ticker);
+                    return result;
+                }
+
+                foreach (var row in data.EnumerateArray())
+                {
+                    var dateStr = row[dateIdx].GetString();
+                    if (string.IsNullOrWhiteSpace(dateStr)) continue;
+                    if (!DateTime.TryParse(dateStr, out var date)) continue;
+
+                    if (row[valueIdx].ValueKind == JsonValueKind.Null)
+                    {
+                        _logger.LogDebug("Null value for coupon on {Date} for {Ticker}", dateStr, ticker);
+                        continue;
+                    }
+
+                    decimal amount = 0;
+                    if (row[valueIdx].ValueKind == JsonValueKind.Number)
+                        amount = row[valueIdx].GetDecimal();
+                    else if (row[valueIdx].ValueKind == JsonValueKind.String && decimal.TryParse(row[valueIdx].GetString(), out var parsed))
+                        amount = parsed;
+                    else
+                        continue;
+
+                    var currency = currencyIdx >= 0 ? row[currencyIdx].GetString() ?? "RUB" : "RUB";
+                    result.Add((date, amount, currency));
+                }
+
+                _logger.LogInformation("Found {Count} coupons for {Ticker}", result.Count, ticker);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error fetching coupons for {Ticker}", ticker);
+            }
+            return result;
+        }
+
+        public async Task<List<(DateTime Date, decimal Amount, string Currency)>> GetAmortizationsAsync(string ticker)
+        {
+            var result = new List<(DateTime, decimal, string)>();
+            try
+            {
+                var url = $"https://iss.moex.com/iss/securities/{ticker.ToUpper()}/amortizations.json";
+                using var stream = await _httpClient.GetStreamAsync(url);
+                using var doc = await JsonDocument.ParseAsync(stream);
+
+                var root = doc.RootElement;
+                if (!root.TryGetProperty("amortizations", out var amorts) ||
+                    !amorts.TryGetProperty("data", out var data) ||
+                    data.GetArrayLength() == 0)
+                {
+                    _logger.LogInformation("No amortization data for {Ticker}", ticker);
+                    return result;
+                }
+
+                var columns = amorts.GetProperty("columns");
+                int dateIdx = FindColumnIndex(columns, "amortdate");
+                int valueIdx = FindColumnIndex(columns, "value");
+                int currencyIdx = FindColumnIndex(columns, "currencyid");
+
+                if (dateIdx == -1 || valueIdx == -1)
+                {
+                    _logger.LogWarning("Required columns not found for amortizations of {Ticker}", ticker);
+                    return result;
+                }
+
+                foreach (var row in data.EnumerateArray())
+                {
+                    var dateStr = row[dateIdx].GetString();
+                    if (string.IsNullOrWhiteSpace(dateStr)) continue;
+                    if (!DateTime.TryParse(dateStr, out var date)) continue;
+
+                    // Пропускаем, если значение null
+                    if (row[valueIdx].ValueKind == JsonValueKind.Null)
+                        continue;
+
+                    decimal amount = 0;
+                    if (row[valueIdx].ValueKind == JsonValueKind.Number)
+                        amount = row[valueIdx].GetDecimal();
+                    else if (row[valueIdx].ValueKind == JsonValueKind.String &&
+                             decimal.TryParse(row[valueIdx].GetString(), out var parsed))
+                        amount = parsed;
+                    else
+                        continue;
+
+                    var currency = currencyIdx >= 0 ? row[currencyIdx].GetString() ?? "RUB" : "RUB";
+                    result.Add((date, amount, currency));
+                }
+                _logger.LogInformation("Found {Count} amortizations for {Ticker}", result.Count, ticker);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error fetching amortizations for {Ticker}", ticker);
+            }
+            return result;
+        }
+
+        // Получить дату и сумму ближайшего купона из description
+        public async Task<(DateTime? Date, decimal? Amount, string Currency)> GetNextCouponFromDescriptionAsync(string ticker)
+        {
+            try
+            {
+                var url = $"https://iss.moex.com/iss/securities/{ticker.ToUpper()}/coupons.json";
+                using var stream = await _httpClient.GetStreamAsync(url);
+                using var doc = await JsonDocument.ParseAsync(stream);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("description", out var desc) &&
+                    desc.TryGetProperty("data", out var data))
+                {
+                    foreach (var row in data.EnumerateArray())
+                    {
+                        var name = row[0].GetString();
+                        var value = row[2].GetString();
+                        if (name == "COUPONDATE" && DateTime.TryParse(value, out var coupDate) && coupDate >= DateTime.Today)
+                        {
+                            // Нашли дату купона, теперь ищем сумму купона
+                            decimal? amount = null;
+                            string currency = "RUB";
+                            foreach (var inner in data.EnumerateArray())
+                            {
+                                if (inner[0].GetString() == "COUPONVALUE" && decimal.TryParse(inner[2].GetString(), out var amt))
+                                {
+                                    amount = amt;
+                                    break;
+                                }
+                            }
+                            return (coupDate, amount, currency);
+                        }
+                    }
+                }
+            }
+            catch { /* игнорируем */ }
+            return (null, null, "RUB");
+        }
+
+        // Получить дату погашения и номинал из description
+        public async Task<(DateTime? Date, decimal? Amount, string Currency)> GetNextAmortizationFromDescriptionAsync(string ticker)
+        {
+            try
+            {
+                var url = $"https://iss.moex.com/iss/securities/{ticker.ToUpper()}/amortizations.json";
+                using var stream = await _httpClient.GetStreamAsync(url);
+                using var doc = await JsonDocument.ParseAsync(stream);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("description", out var desc) &&
+                    desc.TryGetProperty("data", out var data))
+                {
+                    DateTime? matDate = null;
+                    decimal? faceValue = null;
+                    string currency = "RUB";
+
+                    foreach (var row in data.EnumerateArray())
+                    {
+                        var name = row[0].GetString();
+                        var value = row[2].GetString();
+                        if (name == "MATDATE" && DateTime.TryParse(value, out var d) && d >= DateTime.Today)
+                            matDate = d;
+                        else if (name == "FACEVALUE" && decimal.TryParse(value, out var fv))
+                            faceValue = fv;
+                    }
+                    if (matDate.HasValue)
+                        return (matDate, faceValue, currency);
+                }
+            }
+            catch { /* игнорируем */ }
+            return (null, null, "RUB");
+        }
+
         // --------------------------------------------------
         // УНИВЕРСАЛЬНЫЙ ПОИСК БУМАГИ ПО ТИКЕРУ (АКЦИИ, ОБЛИГАЦИИ, ПИФЫ)
         // --------------------------------------------------
@@ -578,6 +778,73 @@ namespace InvestmentTracker.Server.Services
         {
             public string Status { get; set; } = string.Empty;
             public string CloseTime { get; set; } = string.Empty;
+        }
+
+        public class BondPaymentInfo
+        {
+            public DateTime? NextCouponDate { get; set; }
+            public decimal? CouponValue { get; set; }
+            public int? CouponFrequency { get; set; } // выплат в год
+            public DateTime? MaturityDate { get; set; }
+            public decimal? FaceValue { get; set; }
+            public string Currency { get; set; } = "RUB";
+        }
+
+        public async Task<BondPaymentInfo?> GetBondPaymentInfoAsync(string ticker)
+        {
+            try
+            {
+                var url = $"https://iss.moex.com/iss/securities/{ticker.ToUpper()}/coupons.json";
+                using var stream = await _httpClient.GetStreamAsync(url);
+                using var doc = await JsonDocument.ParseAsync(stream);
+                var root = doc.RootElement;
+
+                if (!root.TryGetProperty("description", out var desc) ||
+                    !desc.TryGetProperty("data", out var data))
+                    return null;
+
+                var info = new BondPaymentInfo();
+
+                foreach (var row in data.EnumerateArray())
+                {
+                    var name = row[0].GetString();
+                    var value = row[2].GetString();
+                    switch (name)
+                    {
+                        case "COUPONDATE":
+                            if (DateTime.TryParse(value, out var cd) && cd >= DateTime.Today)
+                                info.NextCouponDate = cd;
+                            break;
+                        case "COUPONVALUE":
+                            if (decimal.TryParse(value, out var cv))
+                                info.CouponValue = cv;
+                            break;
+                        case "COUPONFREQUENCY":
+                            if (int.TryParse(value, out var freq))
+                                info.CouponFrequency = freq;
+                            break;
+                        case "MATDATE":
+                            if (DateTime.TryParse(value, out var md) && md >= DateTime.Today)
+                                info.MaturityDate = md;
+                            break;
+                        case "FACEVALUE":
+                            if (decimal.TryParse(value, out var fv))
+                                info.FaceValue = fv;
+                            break;
+                        case "FACEUNIT":
+                            info.Currency = value ?? "RUB";
+                            break;
+                    }
+                }
+
+                if (info.NextCouponDate.HasValue && info.CouponValue.HasValue && info.CouponFrequency.HasValue)
+                    return info;
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }
