@@ -1,0 +1,103 @@
+﻿@page "/bond/{Ticker}"
+@using InvestmentTracker.Shared.Models
+@using InvestmentTracker.Client.Resources
+@using Microsoft.Extensions.Localization
+@inject HttpClient Http
+@inject IStringLocalizer<SharedResource> Localizer
+
+@if (bond == null)
+{
+    <p>@Localizer["Loading"]</p>
+}
+else if (error != null)
+{
+    <div class="alert alert-danger">@error</div>
+}
+else
+{
+    <h2>@bond.Name (@bond.Ticker)</h2>
+    @if (!string.IsNullOrEmpty(bond.Isin))
+    {
+        <p class="text-muted">ISIN: @bond.Isin</p>
+    }
+
+    <h4>@Localizer["UpcomingPayments"]</h4>
+    @if (events == null)
+    {
+        <p>@Localizer["Loading"]</p>
+    }
+    else if (events.Count == 0)
+    {
+        <p>@Localizer["NoUpcomingPayments"]</p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>@Localizer["Date"]</th>
+                    <th>@Localizer["PaymentType"]</th>
+                    <th>@Localizer["AmountPerUnit"]</th>
+                    <th>@Localizer["Currency"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var e in events)
+                {
+                    <tr>
+                        <td>@e.Date.ToShortDateString()</td>
+                        <td>@GetLocalizedType(e.Type)</td>
+                        <td>@e.AmountPerUnit.ToString("F2")</td>
+                        <td>@e.Currency</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    [Parameter] public string Ticker { get; set; } = string.Empty;
+
+    private SecurityDto? bond;
+    private List<PaymentEventDto>? events;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBondInfo();
+        await LoadUpcomingPayments();
+    }
+
+    private async Task LoadBondInfo()
+    {
+        try
+        {
+            // Ищем бумагу по тикеру через существующий API
+            var securities = await Http.GetFromJsonAsync<List<SecurityDto>>($"api/securities/lookup?ticker={Ticker}");
+            bond = securities?.FirstOrDefault();
+            if (bond == null) error = "Облигация не найдена";
+        }
+        catch (Exception ex) { error = ex.Message; }
+    }
+
+    private async Task LoadUpcomingPayments()
+    {
+        try
+        {
+            // Используем тот же PaymentsController, но с фильтром по тикеру (можно доработать)
+            var url = $"api/payments/upcoming?count=100&myOnly=false&year=2026"; // все будущие
+            var allPayments = await Http.GetFromJsonAsync<List<PaymentEventDto>>(url);
+            events = allPayments?.Where(p => p.Ticker == Ticker).OrderBy(p => p.Date).ToList() ?? new();
+        }
+        catch (Exception ex) { error = ex.Message; }
+    }
+
+    private string GetLocalizedType(string type) => type switch
+    {
+        "Dividend" => "Дивиденд",
+        "Coupon" => "Купон",
+        "Amortization" => "Амортизация",
+        _ => type
+    };
+}

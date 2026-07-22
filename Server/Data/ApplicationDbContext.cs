@@ -19,6 +19,7 @@ namespace InvestmentTracker.Server.Data
         public DbSet<PortfolioItem> PortfolioItems { get; set; }
         public DbSet<Quote> Quotes { get; set; }
         public DbSet<PaymentEvent> PaymentEvents { get; set; }
+        public DbSet<AppSetting> AppSettings { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -53,6 +54,8 @@ namespace InvestmentTracker.Server.Data
                 builder.Entity<PaymentEvent>()
                     .Property(p => p.AmountPerUnit)
                     .HasColumnType("decimal(18,4)");
+
+            
             }
             base.OnModelCreating(builder);
 
@@ -83,6 +86,10 @@ namespace InvestmentTracker.Server.Data
             builder.Entity<Transaction>()
                 .Property(t => t.Commission)
                 .HasColumnType("decimal(18,4)");
+
+            builder.Entity<PaymentEvent>()
+                 .Property(p => p.AmountPerUnit)
+                 .HasColumnType("decimal(18,4)");
 
             // Отключаем каскадное удаление для связи PortfolioItem -> User
             builder.Entity<PortfolioItem>()

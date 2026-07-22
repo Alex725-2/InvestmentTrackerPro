@@ -16,6 +16,22 @@ namespace InvestmentTracker.Server.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IServiceProvider _serviceProvider;
 
+        [HttpGet("settings")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetSetting([FromQuery] string code)
+        {
+            var setting = await _serviceProvider.GetRequiredService<SettingsService>().GetBoolAsync(code);
+            return Ok(setting.ToString());
+        }
+
+        [HttpPut("settings")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> UpdateSetting([FromQuery] string code, [FromQuery] bool enabled)
+        {
+            await _serviceProvider.GetRequiredService<SettingsService>().SetBoolAsync(code, enabled);
+            return NoContent();
+        }
+
         public AdminController(UserManager<ApplicationUser> userManager, IServiceProvider serviceProvider)
         {
             _userManager = userManager;

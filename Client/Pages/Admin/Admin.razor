@@ -118,6 +118,16 @@
             }
         </div>
     </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5>@Localizer["Settings"]</h5>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="notifyNewUser" checked="@notifyNewUser" @onchange="ToggleNotifyNewUser" />
+                <label class="form-check-label" for="notifyNewUser">@Localizer["NotifyNewUser"]</label>
+            </div>
+        </div>
+    </div>
 </div>
 
 @code {
@@ -140,6 +150,34 @@
 
     private bool testEmailSuccess;
     private string? testEmailResult;
+
+    private bool notifyNewUser = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // ... существующий код ...
+        await LoadSettings();
+    }
+
+    private async Task LoadSettings()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/admin/settings?code=SendNotificationAboutNewUser");
+            if (response.IsSuccessStatusCode)
+            {
+                var value = await response.Content.ReadAsStringAsync();
+                notifyNewUser = bool.Parse(value);
+            }
+        }
+        catch { }
+    }
+
+    private async Task ToggleNotifyNewUser(ChangeEventArgs e)
+    {
+        notifyNewUser = (bool)(e.Value ?? false);
+        await Http.PutAsync($"api/admin/settings?code=SendNotificationAboutNewUser&enabled={notifyNewUser}", null);
+    }
 
     private async Task SendTestEmail()
     {

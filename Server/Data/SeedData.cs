@@ -19,6 +19,17 @@ namespace InvestmentTracker.Server.Data
                 await roleManager.CreateAsync(new IdentityRole("Admin"));
             }
 
+            if (!context.AppSettings.Any())
+            {
+                context.AppSettings.Add(new AppSetting
+                {
+                    Name = "Отправка уведомлений администратору о новых пользователях",
+                    Code = "SendNotificationAboutNewUser",
+                    Enabled = true
+                });
+                await context.SaveChangesAsync();
+            }
+
             // 1. Главный администратор
             var adminEmail = "admin@example.com";
             var adminUser = await userManager.FindByEmailAsync(adminEmail);

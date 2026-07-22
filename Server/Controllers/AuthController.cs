@@ -1,11 +1,12 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+﻿using InvestmentTracker.Server.Models;
+using InvestmentTracker.Server.Services;
+using InvestmentTracker.Shared.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using InvestmentTracker.Server.Models;
-using InvestmentTracker.Shared.Models;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace InvestmentTracker.Server.Controllers
 {
@@ -43,6 +44,23 @@ namespace InvestmentTracker.Server.Controllers
             {
                 var errors = string.Join(", ", result.Errors.Select(e => e.Description));
                 return BadRequest(new AuthResponse { IsSuccess = false, Message = errors });
+            }
+
+            if (result.Succeeded)
+            {
+                if (result.Succeeded)
+                {
+                    // Проверяем настройку уведомлений
+                    var settings = HttpContext.RequestServices.GetRequiredService<SettingsService>();
+                    if (await settings.GetBoolAsync("SendNotificationAboutNewUser"))
+                    {
+                        var emailService = HttpContext.RequestServices.GetRequiredService<IEmailService>();
+                        await emailService.SendAsync("razrabotka_2010@mail.ru",
+                            "Новый пользователь",
+                            $"Зарегистрировался: {user.Email} ({user.FullName})");
+                    }
+                    // ... остальной код (токен и т.д.)
+                }
             }
 
             var token = await GenerateJwtToken(user);   // <-- было без await

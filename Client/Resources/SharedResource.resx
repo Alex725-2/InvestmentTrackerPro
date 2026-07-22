@@ -156,7 +156,6 @@
 <data name="CurrentPassword" xml:space="preserve"><value>Текущий пароль</value></data>
 <data name="NewPassword" xml:space="preserve"><value>Новый пароль</value></data>
 <data name="EditProfile" xml:space="preserve"><value>Редактировать имя</value></data>
-<data name="Cancel" xml:space="preserve"><value>Отмена</value></data>
 
 <data name="AdminPanel" xml:space="preserve"><value>Админ-панель</value></data>
 <data name="LoadDividends" xml:space="preserve"><value>Загрузка дивидендов</value></data>
@@ -171,10 +170,12 @@
 <data name="All" xml:space="preserve"><value>Все</value></data>
 <data name="Search" xml:space="preserve"><value>Поиск</value></data>
 <data name="SearchPlaceholder" xml:space="preserve"><value>Введите тикер, ISIN или название...</value></data>
-<data name="Total" xml:space="preserve"><value>Всего</value></data>
 
 <data name="LoadBondPayments" xml:space="preserve"><value>Загрузка купонов и амортизаций</value></data>
 <data name="LoadBondPaymentsDesc" xml:space="preserve"><value>Загрузить купоны и амортизации для всех облигаций из справочника. Может занять длительное время.</value></data>
 <data name="LoadBondPaymentsButton" xml:space="preserve"><value>Загрузить купоны/амортизации</value></data>
+
+<data name="NoUpcomingPayments" xml:space="preserve"><value>Нет предстоящих выплат</value></data>
+<data name="NotifyNewUser" xml:space="preserve"><value>Уведомление о новых пользователях</value></data>
   
 </root>
