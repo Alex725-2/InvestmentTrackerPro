@@ -8,17 +8,15 @@
 @inject AuthenticationStateProvider AuthStateProvider
 
 <style>
-    /* Календарная сетка */
     .calendar-grid {
         width: 100%;
         table-layout: fixed;
         border-collapse: separate;
-        border-spacing: 4px; /* воздух между ячейками */
+        border-spacing: 4px;
         border: none;
         background: transparent;
     }
 
-        /* Заголовки дней недели — теперь на тон темнее */
         .calendar-grid thead th {
             background: #e0e0e0;
             border-radius: 8px;
@@ -29,7 +27,6 @@
             text-align: center;
         }
 
-    /* Ячейка календаря */
     .calendar-cell {
         vertical-align: top;
         height: 80px;
@@ -39,12 +36,10 @@
         background: transparent;
     }
 
-    /* Пустая ячейка — остаётся как есть */
     .empty-day {
         background-color: #f2f2f2;
     }
 
-    /* Цветной блок внутри ячейки */
     .event-block {
         height: 100%;
         border-radius: 10px;
@@ -103,6 +98,16 @@
 
 <h3>@Localizer["Calendar"]</h3>
 
+<!-- ФИЛЬТРЫ ПО ТИПУ ВЫПЛАТ -->
+<div class="mb-3">
+    <div class="btn-group" role="group">
+        <button class="btn btn-outline-secondary @(paymentTypeFilter == "" ? "active" : "")" @onclick='() => SetPaymentTypeFilter("")'>@Localizer["All"]</button>
+        <button class="btn btn-outline-secondary @(paymentTypeFilter == "Dividend" ? "active" : "")" @onclick='() => SetPaymentTypeFilter("Dividend")'>@Localizer["Dividend"]</button>
+        <button class="btn btn-outline-secondary @(paymentTypeFilter == "Coupon" ? "active" : "")" @onclick='() => SetPaymentTypeFilter("Coupon")'>@Localizer["Coupon"]</button>
+        <button class="btn btn-outline-secondary @(paymentTypeFilter == "Amortization" ? "active" : "")" @onclick='() => SetPaymentTypeFilter("Amortization")'>@Localizer["Amortization"]</button>
+    </div>
+</div>
+
 @if (isAuthenticated)
 {
     <div class="mb-3">
@@ -120,19 +125,15 @@ else
 }
 
 <div class="mb-3">
-    <button class="btn btn-outline-secondary @(viewMode == "calendar" ? "active" : "")" @onclick='() => SwitchView("calendar")'>
-        📅 @Localizer["CalendarView"]
-    </button>
-    <button class="btn btn-outline-secondary ms-2 @(viewMode == "table" ? "active" : "")" @onclick='() => SwitchView("table")'>
-        📋 @Localizer["TableView"]
-    </button>
+    <button class="btn btn-outline-secondary @(viewMode == "calendar" ? "active" : "")" @onclick='() => SwitchView("calendar")'>📅 @Localizer["CalendarView"]</button>
+    <button class="btn btn-outline-secondary ms-2 @(viewMode == "table" ? "active" : "")" @onclick='() => SwitchView("table")'>📋 @Localizer["TableView"]</button>
 </div>
 
-@if (monthPayments != null && monthPayments.Count > 0)
+@if (FilteredMonthPayments != null && FilteredMonthPayments.Count > 0)
 {
     <div class="mb-2 text-muted small">
         Выплаты за период:
-        @monthPayments.Min(p => p.Date).ToShortDateString() – @monthPayments.Max(p => p.Date).ToShortDateString()
+        @FilteredMonthPayments.Min(p => p.Date).ToShortDateString() – @FilteredMonthPayments.Max(p => p.Date).ToShortDateString()
     </div>
 }
 
@@ -152,7 +153,7 @@ else if (viewMode == "calendar")
         <button class="btn btn-sm btn-outline-secondary" @onclick="NextMonth">→</button>
     </div>
 
-    @if (monthPayments.Count == 0)
+    @if (FilteredMonthPayments.Count == 0)
     {
         <div class="alert alert-warning">В этом месяце выплат нет. Попробуйте переключить месяц.</div>
     }
@@ -173,20 +174,48 @@ else if (viewMode == "calendar")
                     <tr>
                         @foreach (var day in week)
                         {
-                            var dayEvents = monthPayments.Where(p => p.Date.Date == day.Date).ToList();
-                            <CalendarCell Day="@day.Day" IsCurrentMonth="@day.IsCurrentMonth" Events="@dayEvents" />
+                            var dayEvents = FilteredMonthPayments.Where(p => p.Date.Date == day.Date).ToList();
+                            <CalendarCell Day="@day.Day" IsCurrentMonth="@day.IsCurrentMonth" Events="@dayEvents" Date="@day.Date" OnDayClicked="OnDayClicked" />
                         }
                     </tr>
                 }
             </tbody>
         </table>
     </div>
-
-    @if (isAuthenticated && myOnly && monthPayments.Count > 0)
+    @if (selectedDayEvents != null && selectedDayEvents.Any())
+    {
+        <div class="mt-4">
+            <h5>@selectedDate?.ToString("dd MMMM yyyy")</h5>
+            <table class="table table-sm table-bordered">
+                <thead>
+                    <tr>
+                        <th>Тикер</th>
+                        <th>Наименование</th>
+                        <th>Тип</th>
+                        <th>Сумма на ед.</th>
+                        <th>Валюта</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var evt in selectedDayEvents)
+                    {
+                        <tr>
+                            <td><a href="/bond/@evt.Ticker" target="_blank">@evt.Ticker</a></td>
+                            <td>@evt.SecurityName</td>
+                            <td>@GetLocalizedType(evt.Type)</td>
+                            <td>@evt.AmountPerUnit.ToString("F2")</td>
+                            <td>@evt.Currency</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    @if (isAuthenticated && myOnly && FilteredMonthPayments.Count > 0)
     {
         var today = DateTime.Today;
-        var paid = monthPayments.Where(p => p.Date < today).ToList();
-        var upcoming = monthPayments.Where(p => p.Date >= today).ToList();
+        var paid = FilteredMonthPayments.Where(p => p.Date < today).ToList();
+        var upcoming = FilteredMonthPayments.Where(p => p.Date >= today).ToList();
         var totalPaid = paid.Sum(p => p.UserTotalAmount ?? p.AmountPerUnit);
         var totalUpcoming = upcoming.Sum(p => p.UserTotalAmount ?? p.AmountPerUnit);
         var totalAll = totalPaid + totalUpcoming;
@@ -212,8 +241,7 @@ else if (viewMode == "calendar")
 }
 else
 {
-    var list = (monthPayments ?? allPayments) ?? new List<PaymentEventDto>();
-    var orderedList = list.OrderBy(p => p.Date).ToList();
+    var orderedList = FilteredMonthPayments.OrderBy(p => p.Date).ToList();
 
     <table class="table table-striped">
         <thead>
@@ -255,6 +283,26 @@ else
     private DateTime currentMonth;
     private List<List<CalendarDay>> calendarWeeks = new();
     private string[] daysOfWeek = { "Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс" };
+    private string paymentTypeFilter = "";
+    private DateTime? selectedDate;
+    private List<PaymentEventDto>? selectedDayEvents;
+
+    private void OnDayClicked(DateTime date)
+    {
+        selectedDate = date;
+        selectedDayEvents = FilteredMonthPayments.Where(p => p.Date.Date == date.Date).ToList();
+        StateHasChanged();
+    }
+    private void SetPaymentTypeFilter(string type)
+    {
+        paymentTypeFilter = type;
+        // Фильтрация происходит на клиенте мгновенно
+    }
+
+    private List<PaymentEventDto> FilteredMonthPayments =>
+        string.IsNullOrEmpty(paymentTypeFilter)
+            ? (monthPayments ?? new())
+            : (monthPayments ?? new()).Where(p => p.Type == paymentTypeFilter).ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -301,12 +349,7 @@ else
             var week = new List<CalendarDay>();
             for (int i = 0; i < 7; i++)
             {
-                week.Add(new CalendarDay
-                {
-                    Date = current,
-                    Day = current.Day,
-                    IsCurrentMonth = current.Month == currentMonth.Month
-                });
+                week.Add(new CalendarDay { Date = current, Day = current.Day, IsCurrentMonth = current.Month == currentMonth.Month });
                 current = current.AddDays(1);
             }
             calendarWeeks.Add(week);
@@ -344,7 +387,6 @@ else
 
     private string GetPaidTooltip(List<PaymentEventDto> events) =>
         string.Join("\n", events.Select(e => $"{e.Ticker}: {e.UserTotalAmount ?? e.AmountPerUnit:F2} {e.Currency}"));
-
     private string GetUpcomingTooltip(List<PaymentEventDto> events) =>
         string.Join("\n", events.Select(e => $"{e.Ticker}: {e.UserTotalAmount ?? e.AmountPerUnit:F2} {e.Currency}"));
 

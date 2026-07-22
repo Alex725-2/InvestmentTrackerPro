@@ -112,5 +112,14 @@ namespace InvestmentTracker.Server.Controllers
         {
             public string Ticker { get; set; } = string.Empty;
         }
+
+        [HttpPost("test-email")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> TestEmail()
+        {
+            var emailService = _serviceProvider.GetRequiredService<IEmailService>();
+            await emailService.SendAsync("razrabotka_2010@mail.ru", "Тестовое уведомление", "Это тестовое сообщение от Investment Tracker.");
+            return Ok(new { message = "Тестовое письмо отправлено" });
+        }
     }
 }

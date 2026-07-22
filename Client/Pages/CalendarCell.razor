@@ -4,7 +4,8 @@
 @inject IStringLocalizer<SharedResource> Localizer
 
 <td class="calendar-cell @(IsCurrentMonth ? "" : "other-month") @BgClass"
-    title="@Tooltip">
+    @onclick="() => OnDayClicked.InvokeAsync(Date)"
+    style="cursor:pointer;" title="@Tooltip">
     <div class="event-block @EventColorClass">
         <span class="cell-date">@Day</span>
         @if (HasPayment)
@@ -31,14 +32,11 @@
     [Parameter] public int Day { get; set; }
     [Parameter] public bool IsCurrentMonth { get; set; }
     [Parameter] public List<PaymentEventDto> Events { get; set; } = new();
+    [Parameter] public DateTime Date { get; set; }
+    [Parameter] public EventCallback<DateTime> OnDayClicked { get; set; }
 
     private bool HasPayment => Events.Any();
-    private int EventCount => Events.Count;
-
-    // Фоновый класс для всей ячейки (только для пустых дней)
     private string BgClass => HasPayment ? "" : "empty-day";
-
-    // Класс цветного блока
     private string EventColorClass => HasPayment
         ? Events.First().Type switch
         {
@@ -48,11 +46,9 @@
             _ => "dividend-block"
         }
         : "";
-
     private string Tooltip => HasPayment
         ? string.Join("\n", Events.Select(e => $"{e.Ticker}: {e.AmountPerUnit:F2} {e.Currency} ({GetLocalizedType(e.Type)})"))
         : "";
-
     private string GetLocalizedType(string type) => type switch
     {
         "Dividend" => "Дивиденд",

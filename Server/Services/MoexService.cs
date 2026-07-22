@@ -592,60 +592,49 @@ namespace InvestmentTracker.Server.Services
                 using var doc = await JsonDocument.ParseAsync(stream);
 
                 var root = doc.RootElement;
-                decimal? value = null;
+                if (!root.TryGetProperty("marketdata", out var md) ||
+                    !md.TryGetProperty("data", out var data) || data.GetArrayLength() == 0)
+                    return null;
+
+                var cols = md.GetProperty("columns").EnumerateArray().Select(c => c.GetString()).ToArray();
+                var row = data[0];
+
+                // 1. Текущее значение (CURRENTVALUE)
+                int currentIdx = Array.FindIndex(cols, c => string.Equals(c, "CURRENTVALUE", StringComparison.OrdinalIgnoreCase));
+                decimal? value = currentIdx >= 0 && row.GetArrayLength() > currentIdx ? ParseDecimal(row[currentIdx]) : null;
+
+                // 2. Процент изменения
+                // Пробуем LASTCHANGEPRC (новое поле для индекса), потом LASTCHANGEPRCNT (старое), потом вычисляем из LASTCHANGE
                 decimal? changePct = null;
+                int pctIdx = Array.FindIndex(cols, c => string.Equals(c, "LASTCHANGEPRC", StringComparison.OrdinalIgnoreCase));
+                if (pctIdx >= 0 && row.GetArrayLength() > pctIdx)
+                    changePct = ParseDecimal(row[pctIdx]);
 
-                if (root.TryGetProperty("marketdata", out var md) &&
-                    md.TryGetProperty("columns", out var mdCols) &&
-                    md.TryGetProperty("data", out var mdData) &&
-                    mdData.GetArrayLength() > 0)
+                if (!changePct.HasValue)
                 {
-                    var mdColumnsList = mdCols.EnumerateArray().Select(c => c.GetString()).ToArray();
-                    int? valueIdx = null;
-                    foreach (var name in new[] { "LAST", "LCLOSEPRICE", "CURRENTVALUE" })
-                    {
-                        valueIdx = FindColumnIndexCaseInsensitive(mdColumnsList, name);
-                        if (valueIdx >= 0) break;
-                    }
-                    if (valueIdx >= 0 && mdData[0].GetArrayLength() > valueIdx)
-                    {
-                        value = ParseDecimal(mdData[0][valueIdx.Value]);
-                    }
-
-                    int? chgIdx = null;
-                    foreach (var name in new[] { "LASTCHANGEPRCNT", "CHANGE", "LASTCHANGE" })
-                    {
-                        chgIdx = FindColumnIndexCaseInsensitive(mdColumnsList, name);
-                        if (chgIdx >= 0) break;
-                    }
-                    if (chgIdx >= 0 && mdData[0].GetArrayLength() > chgIdx)
-                    {
-                        changePct = ParseDecimal(mdData[0][chgIdx.Value]);
-                    }
+                    pctIdx = Array.FindIndex(cols, c => string.Equals(c, "LASTCHANGEPRCNT", StringComparison.OrdinalIgnoreCase));
+                    if (pctIdx >= 0 && row.GetArrayLength() > pctIdx)
+                        changePct = ParseDecimal(row[pctIdx]);
                 }
 
-                if (!value.HasValue && root.TryGetProperty("securities", out var sec) &&
-                    sec.TryGetProperty("columns", out var secCols) &&
-                    sec.TryGetProperty("data", out var secData) &&
-                    secData.GetArrayLength() > 0)
+                if (!changePct.HasValue && value.HasValue)
                 {
-                    var secColumnsList = secCols.EnumerateArray().Select(c => c.GetString()).ToArray();
-                    int? valueIdx = null;
-                    foreach (var name in new[] { "CURRENTVALUE", "LAST", "CLOSE" })
+                    int lastChangeIdx = Array.FindIndex(cols, c => string.Equals(c, "LASTCHANGE", StringComparison.OrdinalIgnoreCase));
+                    if (lastChangeIdx >= 0 && row.GetArrayLength() > lastChangeIdx)
                     {
-                        valueIdx = FindColumnIndexCaseInsensitive(secColumnsList, name);
-                        if (valueIdx >= 0) break;
-                    }
-                    if (valueIdx >= 0 && secData[0].GetArrayLength() > valueIdx)
-                    {
-                        value = ParseDecimal(secData[0][valueIdx.Value]);
+                        var lastChange = ParseDecimal(row[lastChangeIdx]);
+                        if (lastChange.HasValue)
+                        {
+                            var prevPrice = value.Value - lastChange.Value;
+                            if (prevPrice != 0)
+                                changePct = Math.Round(lastChange.Value / prevPrice * 100, 2);
+                        }
                     }
                 }
 
                 if (value.HasValue)
                     return new IndexInfo { Value = value, ChangePct = changePct };
 
-                _logger.LogWarning("Could not find index value for {Ticker}", ticker);
                 return null;
             }
             catch (Exception ex)

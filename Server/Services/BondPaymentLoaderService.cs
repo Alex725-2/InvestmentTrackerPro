@@ -30,53 +30,53 @@ namespace InvestmentTracker.Server.Services
 
             foreach (var bond in bonds)
             {
+                // 1. Удаляем старые будущие купоны и амортизации для этой облигации
+                var oldEvents = await context.PaymentEvents
+                    .Where(e => e.SecurityId == bond.Id && e.Date >= DateTime.Today &&
+                               (e.Type == "Coupon" || e.Type == "Amortization"))
+                    .ToListAsync();
+                context.PaymentEvents.RemoveRange(oldEvents);
+
+                // 2. Получаем актуальную информацию
                 var info = await moex.GetBondPaymentInfoAsync(bond.Ticker);
                 if (info == null) continue;
 
-                // Рассчитываем будущие купоны
+                // 3. Генерируем купоны
                 if (info.NextCouponDate.HasValue && info.CouponValue.HasValue && info.CouponFrequency.HasValue)
                 {
                     var date = info.NextCouponDate.Value;
-                    var endDate = info.MaturityDate ?? date.AddYears(10); // если нет даты погашения, ограничим 10 годами
+                    var endDate = info.MaturityDate ?? date.AddYears(10);
                     int monthsStep = 12 / info.CouponFrequency.Value;
 
                     while (date <= endDate)
-                    {
-                        if (!await context.PaymentEvents.AnyAsync(e =>
-                            e.SecurityId == bond.Id && e.Date == date && e.Type == "Coupon"))
-                        {
-                            context.PaymentEvents.Add(new PaymentEvent
-                            {
-                                Ticker = bond.Ticker,
-                                SecurityId = bond.Id,
-                                Date = date,
-                                AmountPerUnit = info.CouponValue.Value,
-                                Currency = info.Currency,
-                                Type = "Coupon"
-                            });
-                            totalCoupons++;
-                        }
-                        date = date.AddMonths(monthsStep);
-                    }
-                }
-
-                // Амортизация (погашение)
-                if (info.MaturityDate.HasValue && info.FaceValue.HasValue)
-                {
-                    if (!await context.PaymentEvents.AnyAsync(e =>
-                        e.SecurityId == bond.Id && e.Date == info.MaturityDate.Value && e.Type == "Amortization"))
                     {
                         context.PaymentEvents.Add(new PaymentEvent
                         {
                             Ticker = bond.Ticker,
                             SecurityId = bond.Id,
-                            Date = info.MaturityDate.Value,
-                            AmountPerUnit = info.FaceValue.Value,
+                            Date = date,
+                            AmountPerUnit = info.CouponValue.Value,
                             Currency = info.Currency,
-                            Type = "Amortization"
+                            Type = "Coupon"
                         });
-                        totalAmorts++;
+                        totalCoupons++;
+                        date = date.AddMonths(monthsStep);
                     }
+                }
+
+                // 4. Амортизация (погашение)
+                if (info.MaturityDate.HasValue && info.FaceValue.HasValue)
+                {
+                    context.PaymentEvents.Add(new PaymentEvent
+                    {
+                        Ticker = bond.Ticker,
+                        SecurityId = bond.Id,
+                        Date = info.MaturityDate.Value,
+                        AmountPerUnit = info.FaceValue.Value,
+                        Currency = info.Currency,
+                        Type = "Amortization"
+                    });
+                    totalAmorts++;
                 }
             }
 

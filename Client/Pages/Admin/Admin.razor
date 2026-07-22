@@ -108,6 +108,16 @@
             <pre class="mt-2 bg-light p-2">@debugResult</pre>
         }
     </div>
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5>Уведомления</h5>
+            <button class="btn btn-secondary" @onclick="SendTestEmail">Отправить тестовое письмо</button>
+            @if (!string.IsNullOrEmpty(testEmailResult))
+            {
+                <div class="alert @(testEmailSuccess ? "alert-success" : "alert-danger") mt-2">@testEmailResult</div>
+            }
+        </div>
+    </div>
 </div>
 
 @code {
@@ -127,6 +137,34 @@
 
     private string debugTicker = "SU26238RMFS4";
     private string? debugResult;
+
+    private bool testEmailSuccess;
+    private string? testEmailResult;
+
+    private async Task SendTestEmail()
+    {
+        testEmailResult = null;
+        StateHasChanged();
+        try
+        {
+            var response = await Http.PostAsync("api/admin/test-email", null);
+            if (response.IsSuccessStatusCode)
+            {
+                testEmailResult = "Письмо отправлено!";
+                testEmailSuccess = true;
+            }
+            else
+            {
+                testEmailResult = $"Ошибка: {await response.Content.ReadAsStringAsync()}";
+                testEmailSuccess = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            testEmailResult = $"Ошибка: {ex.Message}";
+            testEmailSuccess = false;
+        }
+    }
 
     private async Task DebugBond()
     {

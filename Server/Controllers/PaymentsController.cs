@@ -58,19 +58,21 @@ namespace InvestmentTracker.Server.Controllers
             }
 
             var events = await query
-                .Take(count)
-                .Select(e => new PaymentEventDto
-                {
-                    Id = e.Id,
-                    Ticker = e.Ticker,
-                    Date = e.Date,
-                    AmountPerUnit = e.AmountPerUnit,
-                    Currency = e.Currency,
-                    Type = e.Type,
-                    UserQuantity = null,
-                    UserTotalAmount = null
-                })
-                .ToListAsync();
+      .Include(p => p.Security)   // <-- подгружаем связанную бумагу
+      .Take(count)
+      .Select(e => new PaymentEventDto
+      {
+          Id = e.Id,
+          Ticker = e.Ticker,
+          Date = e.Date,
+          AmountPerUnit = e.AmountPerUnit,
+          Currency = e.Currency,
+          Type = e.Type,
+          SecurityName = e.Security.Name,   // <-- заполняем название
+          UserQuantity = null,
+          UserTotalAmount = null
+      })
+      .ToListAsync();
 
             // Дозаполняем пользовательские данные, если нужно
             if (!string.IsNullOrEmpty(userId) && events.Count > 0)

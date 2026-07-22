@@ -137,6 +137,7 @@ builder.Services.AddHostedService<DividendUpdateService>();
 builder.Services.AddScoped<DividendLoaderService>();
 builder.Services.AddScoped<BondLoaderService>();
 builder.Services.AddScoped<BondPaymentLoaderService>();
+builder.Services.AddSingleton<IEmailService, EmailService>();
 
 var app = builder.Build();
 
