@@ -6,8 +6,9 @@
 @inject HttpClient Http
 @inject IStringLocalizer<SharedResource> Localizer
 @inject AuthenticationStateProvider AuthStateProvider
-
+@inject NavigationManager Navigation   
 <style>
+    /* Календарная сетка */
     .calendar-grid {
         width: 100%;
         table-layout: fixed;
@@ -16,7 +17,6 @@
         border: none;
         background: transparent;
     }
-
         .calendar-grid thead th {
             background: #e0e0e0;
             border-radius: 8px;
@@ -26,7 +26,6 @@
             border: none !important;
             text-align: center;
         }
-
     .calendar-cell {
         vertical-align: top;
         height: 80px;
@@ -35,11 +34,9 @@
         border-radius: 10px;
         background: transparent;
     }
-
     .empty-day {
         background-color: #f2f2f2;
     }
-
     .event-block {
         height: 100%;
         border-radius: 10px;
@@ -47,33 +44,21 @@
         display: flex;
         flex-direction: column;
     }
-
-    .dividend-block {
-        background: #d4edda;
-    }
-
-    .coupon-block {
-        background: #cce5ff;
-    }
-
-    .amortization-block {
-        background: #fff3cd;
-    }
-
+    .dividend-block { background: #d4edda; }
+    .coupon-block { background: #cce5ff; }
+    .amortization-block { background: #fff3cd; }
     .cell-date {
         font-size: 1.4rem;
         font-weight: 600;
         line-height: 1;
         color: #222;
     }
-
     .cell-tickers {
         display: flex;
         flex-wrap: wrap;
         gap: 2px;
         margin-top: auto;
     }
-
     .ticker-badge {
         font-size: 0.6rem;
         font-weight: 500;
@@ -82,7 +67,6 @@
         border-radius: 4px;
         color: #333;
     }
-
     .ticker-more {
         font-size: 0.6rem;
         font-weight: 600;
@@ -90,10 +74,7 @@
         margin-left: 2px;
         align-self: center;
     }
-
-    .other-month .event-block {
-        opacity: 0.5;
-    }
+    .other-month .event-block { opacity: 0.5; }
 </style>
 
 <h3>@Localizer["Calendar"]</h3>
@@ -102,7 +83,6 @@
 <div class="mb-3">
     <div class="btn-group" role="group">
         <button class="btn btn-outline-secondary @(paymentTypeFilter == "" ? "active" : "")" @onclick='() => SetPaymentTypeFilter("")'>@Localizer["All"]</button>
-        <button class="btn btn-outline-secondary @(paymentTypeFilter == "Dividend" ? "active" : "")" @onclick='() => SetPaymentTypeFilter("Dividend")'>@Localizer["Dividend"]</button>
         <button class="btn btn-outline-secondary @(paymentTypeFilter == "Coupon" ? "active" : "")" @onclick='() => SetPaymentTypeFilter("Coupon")'>@Localizer["Coupon"]</button>
         <button class="btn btn-outline-secondary @(paymentTypeFilter == "Amortization" ? "active" : "")" @onclick='() => SetPaymentTypeFilter("Amortization")'>@Localizer["Amortization"]</button>
     </div>
@@ -112,7 +92,7 @@
 {
     <div class="mb-3">
         <button class="btn btn-outline-primary @(myOnly ? "active" : "")" @onclick="ToggleMyOnly">
-            @(myOnly? Localizer["OnlyMySecurities"] : Localizer["AllSecurities"])
+            @(myOnly ? Localizer["OnlyMySecurities"] : Localizer["AllSecurities"])
         </button>
     </div>
 }
@@ -182,9 +162,10 @@ else if (viewMode == "calendar")
             </tbody>
         </table>
     </div>
+
     @if (selectedDayEvents != null && selectedDayEvents.Any())
     {
-        <div class="card shadow-sm">
+        <div class="card shadow-sm mt-4">
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0">@selectedDate?.ToString("dd MMMM yyyy")</h5>
             </div>
@@ -206,7 +187,7 @@ else if (viewMode == "calendar")
                                 <tr>
                                     <td><a href="/bond/@evt.Ticker" class="text-decoration-none">@evt.Ticker</a></td>
                                     <td>@evt.SecurityName</td>
-                                    <td><span class="badge @(evt.Type == "Dividend" ? "bg-success" : evt.Type == "Coupon" ? "bg-primary" : "bg-warning text-dark")">@GetLocalizedType(evt.Type)</span></td>
+                                    <td><span class="badge @(evt.Type == "Coupon" ? "bg-primary" : "bg-warning text-dark")">@GetLocalizedType(evt.Type)</span></td>
                                     <td>@evt.AmountPerUnit.ToString("F2")</td>
                                     <td>@evt.Currency</td>
                                 </tr>
@@ -217,6 +198,7 @@ else if (viewMode == "calendar")
             </div>
         </div>
     }
+
     @if (isAuthenticated && myOnly && FilteredMonthPayments.Count > 0)
     {
         var today = DateTime.Today;
@@ -290,19 +272,14 @@ else
     private List<List<CalendarDay>> calendarWeeks = new();
     private string[] daysOfWeek = { "Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс" };
     private string paymentTypeFilter = "";
+
     private DateTime? selectedDate;
     private List<PaymentEventDto>? selectedDayEvents;
 
-    private void OnDayClicked(DateTime date)
-    {
-        selectedDate = date;
-        selectedDayEvents = FilteredMonthPayments.Where(p => p.Date.Date == date.Date).ToList();
-        StateHasChanged();
-    }
     private void SetPaymentTypeFilter(string type)
     {
         paymentTypeFilter = type;
-        // Фильтрация происходит на клиенте мгновенно
+        Navigation.NavigateTo($"/calendar?filter={type}", forceLoad: false, replace: true);
     }
 
     private List<PaymentEventDto> FilteredMonthPayments =>
@@ -312,9 +289,16 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // Читаем фильтр из URL, если есть
+        var uri = new Uri(Navigation.Uri);
+        var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var filter = queryParams["filter"];
+        if (!string.IsNullOrEmpty(filter))
+            paymentTypeFilter = filter;
+
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
-        myOnly = isAuthenticated;
+        myOnly = false;  // по умолчанию показываем все бумаги
         currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
         await LoadAllPayments();
         await LoadMonthPayments();
@@ -403,6 +387,12 @@ else
         "Amortization" => "Амортизация",
         _ => type
     };
+
+    private void OnDayClicked(DateTime date)
+    {
+        selectedDate = date;
+        selectedDayEvents = FilteredMonthPayments.Where(p => p.Date.Date == date.Date).ToList();
+    }
 
     public class CalendarDay
     {

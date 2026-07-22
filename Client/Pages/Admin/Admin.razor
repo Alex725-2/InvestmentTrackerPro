@@ -128,6 +128,20 @@
             </div>
         </div>
     </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5>Очистка выплат</h5>
+            <p class="text-muted">Удаляет все записи из таблицы PaymentEvents. Используйте с осторожностью.</p>
+            <button class="btn btn-danger" @onclick="ClearPayments" disabled="@isClearing">
+                @(isClearing ? "Удаление..." : "Очистить все выплаты")
+            </button>
+            @if (!string.IsNullOrEmpty(clearPaymentsMessage))
+            {
+                <div class="alert @(clearPaymentsSuccess ? "alert-success" : "alert-danger") mt-2">@clearPaymentsMessage</div>
+            }
+        </div>
+    </div>
 </div>
 
 @code {
@@ -152,6 +166,54 @@
     private string? testEmailResult;
 
     private bool notifyNewUser = true;
+
+    private bool isClearing;
+    private string? clearPaymentsMessage;
+    private bool clearPaymentsSuccess;
+
+    private async Task ClearPayments()
+    {
+        isClearing = true;
+        clearPaymentsMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+            client.BaseAddress = new Uri(Navigation.BaseUri);
+            var token = await AuthService.GetToken();
+            if (!string.IsNullOrEmpty(token))
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await client.PostAsync("api/admin/clear-payments", null);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ClearResult>();
+                clearPaymentsMessage = $"Удалено записей: {result?.Deleted ?? 0}";
+                clearPaymentsSuccess = true;
+            }
+            else
+            {
+                clearPaymentsMessage = $"Ошибка: {await response.Content.ReadAsStringAsync()}";
+                clearPaymentsSuccess = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            clearPaymentsMessage = $"Ошибка: {ex.Message}";
+            clearPaymentsSuccess = false;
+        }
+        finally
+        {
+            isClearing = false;
+            StateHasChanged();
+        }
+    }
+
+    private class ClearResult
+    {
+        public int Deleted { get; set; }
+    }
 
     protected override async Task OnInitializedAsync()
     {

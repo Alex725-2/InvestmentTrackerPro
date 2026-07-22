@@ -1,5 +1,4 @@
-﻿// File: PaymentsController.cs (full code)
-using InvestmentTracker.Server.Data;
+﻿using InvestmentTracker.Server.Data;
 using InvestmentTracker.Server.Models;
 using InvestmentTracker.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -26,21 +25,43 @@ namespace InvestmentTracker.Server.Controllers
             [FromQuery] bool myOnly = false,
             [FromQuery] int count = 500,
             [FromQuery] int? year = null,
-            [FromQuery] int? month = null)
+            [FromQuery] int? month = null,
+            [FromQuery] string? ticker = null,
+            [FromQuery] bool includePast = false)
         {
             var query = _context.PaymentEvents.AsQueryable();
 
-            if (year.HasValue && month.HasValue)
+            // Фильтр по конкретному тикеру (используется на странице облигации)
+            if (!string.IsNullOrEmpty(ticker))
             {
-                var from = new DateTime(year.Value, month.Value, 1);
-                var to = from.AddMonths(1);
-                query = query.Where(p => p.Date >= from && p.Date < to);
+                query = query.Where(p => p.Ticker == ticker);
+            }
+
+            // Фильтр по дате
+            if (!includePast)
+            {
+                if (year.HasValue && month.HasValue)
+                {
+                    var from = new DateTime(year.Value, month.Value, 1);
+                    var to = from.AddMonths(1);
+                    query = query.Where(p => p.Date >= from && p.Date < to);
+                }
+                else
+                {
+                    // По умолчанию — только будущие события
+                    query = query.Where(p => p.Date >= DateTime.UtcNow.Date);
+                }
             }
             else
             {
-                // Если месяц не указан, возвращаем последний год, чтобы календарь мог найти ближайший месяц с данными
-                var from = DateTime.UtcNow.Date.AddYears(-1);
-                query = query.Where(p => p.Date >= from);
+                // Когда includePast = true, можем ограничить годом/месяцем, если они заданы
+                if (year.HasValue && month.HasValue)
+                {
+                    var from = new DateTime(year.Value, month.Value, 1);
+                    var to = from.AddMonths(1);
+                    query = query.Where(p => p.Date >= from && p.Date < to);
+                }
+                // Иначе возвращаем все события (включая прошлые)
             }
 
             string? userId = null;
@@ -58,23 +79,24 @@ namespace InvestmentTracker.Server.Controllers
             }
 
             var events = await query
-      .Include(p => p.Security)   // <-- подгружаем связанную бумагу
-      .Take(count)
-      .Select(e => new PaymentEventDto
-      {
-          Id = e.Id,
-          Ticker = e.Ticker,
-          Date = e.Date,
-          AmountPerUnit = e.AmountPerUnit,
-          Currency = e.Currency,
-          Type = e.Type,
-          SecurityName = e.Security.Name,   // <-- заполняем название
-          UserQuantity = null,
-          UserTotalAmount = null
-      })
-      .ToListAsync();
+                .Include(p => p.Security)
+                .Take(count)
+                .Select(e => new PaymentEventDto
+                {
+                    Id = e.Id,
+                    Ticker = e.Ticker,
+                    Date = e.Date,
+                    AmountPerUnit = e.AmountPerUnit,
+                    Currency = e.Currency,
+                    Type = e.Type,
+                    SecurityName = e.Security.Name,
+                    UserQuantity = null,
+                    UserTotalAmount = null,
+                    IsEstimated = e.IsEstimated
+                })
+                .ToListAsync();
 
-            // Дозаполняем пользовательские данные, если нужно
+            // Дозаполняем пользовательские данные
             if (!string.IsNullOrEmpty(userId) && events.Count > 0)
             {
                 var tickers = events.Select(e => e.Ticker).Distinct().ToList();
@@ -96,45 +118,6 @@ namespace InvestmentTracker.Server.Controllers
             }
 
             return Ok(events);
-        }
-
-        [HttpGet("force-update")]
-        [AllowAnonymous]
-        public async Task<IActionResult> ForceUpdate()
-        {
-            var moex = HttpContext.RequestServices.GetRequiredService<Services.MoexService>();
-            var context = HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
-
-            var securities = await context.Securities
-                .Where(s => s.AssetType.Name == "Акция")
-                .ToListAsync();
-
-            foreach (var security in securities)
-            {
-                var dividends = await moex.GetDividendsAsync(security.Ticker);
-                foreach (var div in dividends)
-                {
-                    var exists = await context.PaymentEvents.AnyAsync(e =>
-                        e.SecurityId == security.Id &&
-                        e.Date == div.Date &&
-                        e.Type == "Dividend");
-
-                    if (!exists)
-                    {
-                        context.PaymentEvents.Add(new PaymentEvent
-                        {
-                            Ticker = security.Ticker,
-                            SecurityId = security.Id,
-                            Date = div.Date,
-                            AmountPerUnit = div.Amount,
-                            Currency = div.Currency,
-                            Type = "Dividend"
-                        });
-                    }
-                }
-            }
-            await context.SaveChangesAsync();
-            return Ok($"Updated {securities.Count} securities");
         }
     }
 }

@@ -13,6 +13,17 @@ namespace InvestmentTracker.Server.Controllers
     [ApiController]
     public class AdminController : ControllerBase
     {
+        [HttpPost("clear-payments")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ClearPayments()
+        {
+            var context = _serviceProvider.GetRequiredService<ApplicationDbContext>();
+            var all = await context.PaymentEvents.ToListAsync();
+            context.PaymentEvents.RemoveRange(all);
+            await context.SaveChangesAsync();
+            return Ok(new { Deleted = all.Count });
+        }
+
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IServiceProvider _serviceProvider;
 

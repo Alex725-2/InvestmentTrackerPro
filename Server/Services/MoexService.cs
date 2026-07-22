@@ -821,7 +821,7 @@ namespace InvestmentTracker.Server.Services
                                 info.FaceValue = fv;
                             break;
                         case "FACEUNIT":
-                            info.Currency = value ?? "RUB";
+                            info.Currency = (value == "SUR") ? "RUB" : (value ?? "RUB");
                             break;
                     }
                 }
