@@ -22,5 +22,7 @@ namespace InvestmentTracker.Server.Models
 
         public int SecurityId { get; set; }
         public Security Security { get; set; } = null!;
+
+        public bool IsEstimated { get; set; } // true – прогноз, false – гарантировано
     }
 }

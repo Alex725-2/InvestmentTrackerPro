@@ -167,6 +167,7 @@ else
 
 app.UseHttpsRedirection();
 
+app.UseMiddleware<InvestmentTracker.Server.Middleware.SeoMiddleware>();
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
 

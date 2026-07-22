@@ -9,4 +9,5 @@
     public decimal? UserQuantity { get; set; }
     public decimal? UserTotalAmount { get; set; }
     public string SecurityName { get; set; } = string.Empty;   // <-- добавлено
+    public bool IsEstimated { get; set; }
 }

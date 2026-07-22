@@ -184,31 +184,37 @@ else if (viewMode == "calendar")
     </div>
     @if (selectedDayEvents != null && selectedDayEvents.Any())
     {
-        <div class="mt-4">
-            <h5>@selectedDate?.ToString("dd MMMM yyyy")</h5>
-            <table class="table table-sm table-bordered">
-                <thead>
-                    <tr>
-                        <th>Тикер</th>
-                        <th>Наименование</th>
-                        <th>Тип</th>
-                        <th>Сумма на ед.</th>
-                        <th>Валюта</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var evt in selectedDayEvents)
-                    {
-                        <tr>
-                            <td><a href="/bond/@evt.Ticker" target="_blank">@evt.Ticker</a></td>
-                            <td>@evt.SecurityName</td>
-                            <td>@GetLocalizedType(evt.Type)</td>
-                            <td>@evt.AmountPerUnit.ToString("F2")</td>
-                            <td>@evt.Currency</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">@selectedDate?.ToString("dd MMMM yyyy")</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Тикер</th>
+                                <th>Наименование</th>
+                                <th>Тип</th>
+                                <th>Сумма на ед.</th>
+                                <th>Валюта</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var evt in selectedDayEvents)
+                            {
+                                <tr>
+                                    <td><a href="/bond/@evt.Ticker" class="text-decoration-none">@evt.Ticker</a></td>
+                                    <td>@evt.SecurityName</td>
+                                    <td><span class="badge @(evt.Type == "Dividend" ? "bg-success" : evt.Type == "Coupon" ? "bg-primary" : "bg-warning text-dark")">@GetLocalizedType(evt.Type)</span></td>
+                                    <td>@evt.AmountPerUnit.ToString("F2")</td>
+                                    <td>@evt.Currency</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     }
     @if (isAuthenticated && myOnly && FilteredMonthPayments.Count > 0)

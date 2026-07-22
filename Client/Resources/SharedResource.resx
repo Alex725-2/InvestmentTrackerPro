@@ -177,5 +177,6 @@
 
 <data name="NoUpcomingPayments" xml:space="preserve"><value>Нет предстоящих выплат</value></data>
 <data name="NotifyNewUser" xml:space="preserve"><value>Уведомление о новых пользователях</value></data>
+<data name="HidePast" xml:space="preserve"><value>Скрыть прошедшие</value></data>
   
 </root>
