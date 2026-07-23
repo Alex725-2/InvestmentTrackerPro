@@ -87,9 +87,9 @@ namespace InvestmentTracker.Server.Controllers
             await _context.Database.ExecuteSqlRawAsync(
                 "INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ('20260723104024_InitialCreate', '8.0.0');"
             );
-            await _context.Database.ExecuteSqlRawAsync(
-                "INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ('20260723114044_AddTestRecord', '8.0.0');"
-            );
+            //await _context.Database.ExecuteSqlRawAsync(
+            //    "INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ('20260723114044_AddTestRecord', '8.0.0');"
+            //);
             return Ok("История миграций исправлена.");
         }
 
