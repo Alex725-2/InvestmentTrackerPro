@@ -13,6 +13,20 @@ namespace InvestmentTracker.Server.Controllers
     [ApiController]
     public class AdminController : ControllerBase
     {
+        [HttpPost("fix-migrations")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> FixMigrations()
+        {
+            var context = _serviceProvider.GetRequiredService<ApplicationDbContext>();
+            await context.Database.ExecuteSqlRawAsync(
+                "CREATE TABLE IF NOT EXISTS __EFMigrationsHistory (MigrationId TEXT PRIMARY KEY, ProductVersion TEXT);"
+            );
+            await context.Database.ExecuteSqlRawAsync(
+                "INSERT INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ('20260723104024_InitialCreate', '8.0.0');"
+            );
+            return Ok("История миграций исправлена.");
+        }
+
         [HttpPost("clear-payments")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> ClearPayments()
