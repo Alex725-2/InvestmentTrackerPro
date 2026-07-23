@@ -7,7 +7,11 @@
 
 <h3 class="mb-4">@Localizer["Profile"]</h3>
 
-@if (profile == null)
+@if (!string.IsNullOrEmpty(loadError))
+{
+    <div class="alert alert-danger">@loadError</div>
+}
+else if (profile == null)
 {
     <p>@Localizer["Loading"]</p>
 }
@@ -16,7 +20,6 @@ else
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <div class="d-flex align-items-start">
-                <!-- Аватар (заглушка) -->
                 <div class="me-3">
                     <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
                          style="width: 64px; height: 64px; font-size: 1.5rem;">
@@ -24,7 +27,6 @@ else
                     </div>
                 </div>
                 <div class="flex-grow-1">
-                    <!-- Имя с возможностью редактирования -->
                     @if (isEditingName)
                     {
                         <div class="input-group input-group-sm mb-2">
@@ -56,7 +58,6 @@ else
         </div>
     </div>
 
-    <!-- Модальное окно смены пароля -->
     @if (showPasswordChange)
     {
         <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -109,6 +110,7 @@ else
 
     private string? profileMessage;
     private bool profileSuccess;
+    private string? loadError;
 
     private string? passwordMessage;
     private bool passwordSuccess;
@@ -116,7 +118,6 @@ else
 
     private bool isEditingName;
     private string editName = string.Empty;
-
     private bool showPassword;
     private bool showNewPassword;
 
@@ -133,11 +134,16 @@ else
             if (profile != null)
             {
                 updateProfile.FullName = profile.FullName ?? "";
+                loadError = null;
+            }
+            else
+            {
+                loadError = "Профиль не найден. Возможно, вы не авторизованы.";
             }
         }
         catch (Exception ex)
         {
-            profileMessage = $"Ошибка загрузки профиля: {ex.Message}";
+            loadError = $"Ошибка загрузки профиля: {ex.Message}";
         }
     }
 
@@ -203,7 +209,6 @@ else
                 passwordMessage = "Пароль изменён";
                 passwordSuccess = true;
                 changePassword = new ChangePasswordDto();
-                // Автозакрытие через 1.5 секунды
                 _ = Task.Delay(1500).ContinueWith(_ =>
                 {
                     showPasswordChange = false;

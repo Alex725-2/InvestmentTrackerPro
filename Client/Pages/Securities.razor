@@ -14,9 +14,12 @@
         <label class="form-label">@Localizer["AssetType"]</label>
         <select @bind="selectedAssetTypeId" class="form-select">
             <option value="">@Localizer["All"]</option>
-            @foreach (var type in assetTypes)
+            @if (assetTypes != null)
             {
-                <option value="@type.Id">@type.Name</option>
+                @foreach (var type in assetTypes)
+                {
+                    <option value="@type.Id">@type.Name</option>
+                }
             }
         </select>
     </div>
@@ -37,6 +40,7 @@ else if (errorMessage != null)
 }
 else
 {
+    var filtered = filteredSecurities;
     <table class="table table-striped">
         <thead>
             <tr>
@@ -48,13 +52,14 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var sec in filteredSecurities)
+            @foreach (var sec in filtered)
             {
+                if (sec == null) continue;
                 <tr>
                     <td>@sec.Ticker</td>
-                    <td>@sec.Isin</td>
+                    <td>@(sec.Isin ?? "—")</td>
                     <td>@sec.Name</td>
-                    <td>@sec.AssetTypeName</td>
+                    <td>@(sec.AssetTypeName ?? "—")</td>
                     <td>
                         <button class="btn btn-sm btn-danger" @onclick="() => DeleteSecurity(sec.Id)">@Localizer["Delete"]</button>
                     </td>
@@ -62,7 +67,7 @@ else
             }
         </tbody>
     </table>
-    <div class="text-muted">@Localizer["Total"]: @filteredSecurities.Count</div>
+    <div class="text-muted">@Localizer["Total"]: @filtered.Count</div>
 }
 
 <button class="btn btn-success mt-2" @onclick="NavigateToCreate">@Localizer["AddSecurity"]</button>
@@ -70,25 +75,36 @@ else
 @code {
     private List<SecurityDto>? securities;
     private string? errorMessage;
-
-    // Фильтры
     private string selectedAssetTypeId = "";
     private string searchText = "";
     private List<AssetTypeDto>? assetTypes;
 
-    // Результат фильтрации
-    private List<SecurityDto> filteredSecurities => string.IsNullOrWhiteSpace(searchText) && string.IsNullOrEmpty(selectedAssetTypeId)
-        ? (securities ?? new())
-        : (securities ?? new()).Where(s =>
-            (string.IsNullOrEmpty(selectedAssetTypeId) || s.AssetTypeId.ToString() == selectedAssetTypeId) &&
-            (string.IsNullOrWhiteSpace(searchText) ||
-                (s.Ticker?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true) ||
-                (s.Isin?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true) ||
-                (s.Name?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true))
-        ).ToList();
+    // Вычисляемое свойство с защитой от null
+    private List<SecurityDto> filteredSecurities
+    {
+        get
+        {
+            if (securities == null) return new List<SecurityDto>();
+            var query = securities.AsEnumerable();
+            if (!string.IsNullOrEmpty(selectedAssetTypeId))
+                query = query.Where(s => s?.AssetTypeId.ToString() == selectedAssetTypeId);
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query = query.Where(s =>
+                    s != null &&
+                    ((s.Ticker?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true) ||
+                     (s.Isin?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true) ||
+                     (s.Name?.Contains(searchText, StringComparison.OrdinalIgnoreCase) == true)));
+            }
+            return query.ToList();
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
+        // Инициализируем списки, чтобы избежать null
+        securities = new List<SecurityDto>();
+        assetTypes = new List<AssetTypeDto>();
         await LoadSecurities();
         await LoadAssetTypes();
     }
@@ -97,12 +113,13 @@ else
     {
         try
         {
-            securities = await Http.GetFromJsonAsync<List<SecurityDto>>("api/securities") ?? new();
+            var data = await Http.GetFromJsonAsync<List<SecurityDto>>("api/securities");
+            securities = data ?? new List<SecurityDto>();
             errorMessage = null;
         }
         catch (Exception ex)
         {
-            securities = new();
+            securities = new List<SecurityDto>();
             errorMessage = $"Ошибка загрузки: {ex.Message}";
         }
     }
@@ -111,11 +128,12 @@ else
     {
         try
         {
-            assetTypes = await Http.GetFromJsonAsync<List<AssetTypeDto>>("api/assettypes") ?? new();
+            var data = await Http.GetFromJsonAsync<List<AssetTypeDto>>("api/assettypes");
+            assetTypes = data ?? new List<AssetTypeDto>();
         }
         catch
         {
-            assetTypes = new();
+            assetTypes = new List<AssetTypeDto>();
         }
     }
 

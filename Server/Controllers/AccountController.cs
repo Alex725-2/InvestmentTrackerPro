@@ -21,12 +21,13 @@ namespace InvestmentTracker.Server.Controllers
 
         private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
+        // GET api/account/profile
         [HttpGet("profile")]
         public async Task<ActionResult<ProfileDto>> GetProfile()
         {
-            var userId = GetUserId();
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null) return NotFound();
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return NotFound();
 
             return Ok(new ProfileDto
             {
@@ -36,14 +37,14 @@ namespace InvestmentTracker.Server.Controllers
             });
         }
 
+        // POST api/account/change-password
         [HttpPost("change-password")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var userId = GetUserId();
-            var user = await _userManager.FindByIdAsync(userId);
+            var user = await _userManager.GetUserAsync(User);
             if (user == null) return NotFound("Пользователь не найден.");
 
             var result = await _userManager.ChangePasswordAsync(user, dto.OldPassword, dto.NewPassword);
@@ -56,8 +57,8 @@ namespace InvestmentTracker.Server.Controllers
             return Ok(new { Message = "Пароль успешно изменён." });
         }
 
+        // PUT api/account/profile
         [HttpPut("profile")]
-        [Authorize]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto)
         {
             var user = await _userManager.GetUserAsync(User);
