@@ -15,23 +15,15 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (builder.Environment.IsDevelopment())
 {
-    // Локально: SQL Server (LocalDB)
+    // Локально: SQLite (для совместимости с Production)
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlServer(connectionString));
+        options.UseSqlite(connectionString));
 }
 else
 {
-    // Продакшен: SQLite, путь берётся из переменной окружения (см. systemd‑юнит)
-    //builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    //    options.UseSqlite(connectionString));
-    // Продакшен: SQLite, путь к файлу БД задан жёстко,
-    // чтобы не зависеть от переменной окружения.
+    // Продакшен: SQLite, путь к файлу жёстко прописан
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
         options.UseSqlite("Data Source=/opt/investment-tracker-pro/app-data/investmenttracker-pro.db"));
-
-    // Продакшен: SQLite, файл в app-data
-    //builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    //        options.UseSqlite("Data Source=/opt/investment-tracker-pro/app-data/investmenttracker.db"));
 }
 
 // ===================== 2. IDENTITY =====================
@@ -109,21 +101,9 @@ builder.Services.AddSwaggerGen(c =>
 // ===================== 5. HANGFIRE (только локально) =====================
 if (builder.Environment.IsDevelopment())
 {
-    builder.Services.AddHangfire(config =>
-    {
-        config.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-              .UseSimpleAssemblyNameTypeSerializer()
-              .UseRecommendedSerializerSettings()
-              .UseSqlServerStorage(connectionString, new SqlServerStorageOptions
-              {
-                  CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-                  SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-                  QueuePollInterval = TimeSpan.Zero,
-                  UseRecommendedIsolationLevel = true,
-                  DisableGlobalLocks = true
-              });
-    });
-    builder.Services.AddHangfireServer();
+    // Hangfire требует SQL Server, поэтому локально он недоступен при использовании SQLite.
+    // Если нужен локально, можно временно подключить SQL Server только для Hangfire.
+    // Пока оставляем пустым.
 }
 
 // ===================== 6. РЕГИСТРАЦИЯ СЕРВИСОВ =====================
@@ -134,8 +114,6 @@ builder.Services.AddScoped<QuoteUpdateService>();
 if (!builder.Environment.IsDevelopment())
 {
     builder.Services.AddHostedService<QuoteBackgroundService>();
-    // BondMaintenanceService временно отключён, чтобы избежать дублирования
-    // builder.Services.AddHostedService<BondMaintenanceService>();
 }
 
 builder.Services.AddSingleton<SettingsService>();
@@ -147,21 +125,12 @@ builder.Services.AddSingleton<IEmailService, EmailService>();
 
 var app = builder.Build();
 
-// ===================== 7. ПРИМЕНЕНИЕ МИГРАЦИЙ / СОЗДАНИЕ БД =====================
+// ===================== 7. ПРИМЕНЕНИЕ МИГРАЦИЙ =====================
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    if (app.Environment.IsDevelopment())
-    {
-        // В разработке просто пересоздаём базу по модели (быстро и удобно)
-        db.Database.EnsureCreated();
-    }
-    else
-    {
-        // На проде выполняем миграции, чтобы не потерять данные
-        db.Database.Migrate();
-        //db.Database.EnsureCreated();
-    }
+    // Всегда используем Migrate – он совместим с SQLite и корректно ведёт историю
+    db.Database.Migrate();
 }
 
 // ===================== 8. ЛОГИРОВАНИЕ =====================
@@ -197,12 +166,7 @@ app.UseAuthorization();
 // ===================== 13. HANGFIRE DASHBOARD (только локально) =====================
 if (app.Environment.IsDevelopment())
 {
-    app.UseHangfireDashboard("/hangfire");
-
-    RecurringJob.AddOrUpdate<QuoteUpdateService>(
-        "update-quotes",
-        service => service.UpdateAllQuotesAsync(),
-        "*/15 * * * *");
+    // Локально Hangfire не используется, т.к. база SQLite
 }
 
 // ===================== 14. КОНТРОЛЛЕРЫ, RAZOR PAGES, SEO‑MIDDLEWARE =====================
