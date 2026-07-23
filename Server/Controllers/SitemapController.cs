@@ -18,31 +18,37 @@ namespace InvestmentTracker.Server.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetSitemap()
+        public IActionResult GetSitemap()
         {
-            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+            var baseUrl = $"https://{Request.Host.Value}";  // <-- было http, стало https
+            var urls = new List<string>
+    {
+        $"{baseUrl}/",
+        $"{baseUrl}/calendar"
+    };
+
+            // Добавляем страницы облигаций
+            var context = HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
+            var bonds = context.Securities
+                .Where(s => s.AssetType.Name == "Облигация")
+                .Select(s => s.Ticker)
+                .ToList();
+
+            urls.AddRange(bonds.Select(ticker => $"{baseUrl}/bond/{ticker}"));
+
             var sb = new StringBuilder();
             sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
             sb.AppendLine("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
-
-            // Главная страница
-            sb.AppendLine($"  <url><loc>{baseUrl}/</loc></url>");
-            // Календарь
-            sb.AppendLine($"  <url><loc>{baseUrl}/calendar</loc></url>");
-
-            // Все облигации
-            var bonds = await _context.Securities
-                .Where(s => s.AssetType.Name == "Облигация")
-                .Select(s => s.Ticker)
-                .ToListAsync();
-            foreach (var ticker in bonds)
+            foreach (var url in urls)
             {
-                sb.AppendLine($"  <url><loc>{baseUrl}/bond/{ticker}</loc></url>");
+                sb.AppendLine("  <url>");
+                sb.AppendLine($"    <loc>{url}</loc>");
+                sb.AppendLine($"    <lastmod>{DateTime.UtcNow:yyyy-MM-dd}</lastmod>");
+                sb.AppendLine("  </url>");
             }
-
             sb.AppendLine("</urlset>");
 
-            return Content(sb.ToString(), "text/xml; charset=utf-8");
+            return Content(sb.ToString(), "application/xml; charset=utf-8");
         }
     }
 }
