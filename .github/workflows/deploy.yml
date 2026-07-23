@@ -17,7 +17,7 @@ jobs:
         dotnet-version: '8.0.x'
 
     - name: Publish Server project
-      run: dotnet publish Server/InvestmentTracker.Server.csproj -c Release -o publish
+      run: dotnet publish InvestmentTracker.Server/InvestmentTracker.Server.csproj -c Release -o publish
 
     - name: Create archive
       run: tar -czf publish.tar.gz -C publish .
@@ -39,7 +39,10 @@ jobs:
         key: ${{ secrets.SSH_KEY }}
         script: |
           cd /opt/investment-tracker-pro
-          find app -not -name 'investmenttracker-pro.db' -type f -delete
-          find app -mindepth 1 -type d -empty -delete
+          # Удаляем старые файлы приложения, НО НЕ БАЗУ ДАННЫХ
+          find app -type f -not -name 'investmenttracker-pro.db' -delete
+          find app -type d -empty -delete
+          # Распаковываем новый архив
           tar -xzf publish.tar.gz -C app
+          # Перезапускаем сервис
           systemctl restart investment-tracker-pro
