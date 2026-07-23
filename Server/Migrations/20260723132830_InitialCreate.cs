@@ -11,6 +11,7 @@ namespace InvestmentTracker.Server.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // 1. AppSettings
             migrationBuilder.CreateTable(
                 name: "AppSettings",
                 columns: table => new
@@ -21,11 +22,9 @@ namespace InvestmentTracker.Server.Migrations
                     Code = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Enabled = table.Column<bool>(type: "bit", nullable: false)
                 },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AppSettings", x => x.Id);
-                });
+                constraints: table => table.PrimaryKey("PK_AppSettings", x => x.Id));
 
+            // 2. AspNetRoles – ConcurrencyStamp заменён на TEXT
             migrationBuilder.CreateTable(
                 name: "AspNetRoles",
                 columns: table => new
@@ -33,13 +32,11 @@ namespace InvestmentTracker.Server.Migrations
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    ConcurrencyStamp = table.Column<string>(type: "TEXT", nullable: true)
                 },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetRoles", x => x.Id);
-                });
+                constraints: table => table.PrimaryKey("PK_AspNetRoles", x => x.Id));
 
+            // 3. AspNetUsers – SecurityStamp и ConcurrencyStamp заменены на TEXT
             migrationBuilder.CreateTable(
                 name: "AspNetUsers",
                 columns: table => new
@@ -53,8 +50,8 @@ namespace InvestmentTracker.Server.Migrations
                     NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
                     PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SecurityStamp = table.Column<string>(type: "TEXT", nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "TEXT", nullable: true),
                     PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
                     TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
@@ -62,11 +59,9 @@ namespace InvestmentTracker.Server.Migrations
                     LockoutEnabled = table.Column<bool>(type: "bit", nullable: false),
                     AccessFailedCount = table.Column<int>(type: "int", nullable: false)
                 },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
-                });
+                constraints: table => table.PrimaryKey("PK_AspNetUsers", x => x.Id));
 
+            // 4. AssetTypes
             migrationBuilder.CreateTable(
                 name: "AssetTypes",
                 columns: table => new
@@ -75,11 +70,9 @@ namespace InvestmentTracker.Server.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
                 },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AssetTypes", x => x.Id);
-                });
+                constraints: table => table.PrimaryKey("PK_AssetTypes", x => x.Id));
 
+            // 5. Brokers
             migrationBuilder.CreateTable(
                 name: "Brokers",
                 columns: table => new
@@ -91,11 +84,9 @@ namespace InvestmentTracker.Server.Migrations
                     DefaultCommissionRate = table.Column<decimal>(type: "decimal(18,4)", nullable: false),
                     IsApproved = table.Column<bool>(type: "bit", nullable: false)
                 },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Brokers", x => x.Id);
-                });
+                constraints: table => table.PrimaryKey("PK_Brokers", x => x.Id));
 
+            // 6. Currencies
             migrationBuilder.CreateTable(
                 name: "Currencies",
                 columns: table => new
@@ -105,11 +96,20 @@ namespace InvestmentTracker.Server.Migrations
                     Code = table.Column<string>(type: "nvarchar(3)", maxLength: 3, nullable: false),
                     Name = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
                 },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Currencies", x => x.Id);
-                });
+                constraints: table => table.PrimaryKey("PK_Currencies", x => x.Id));
 
+            // 7. TestRecords
+            migrationBuilder.CreateTable(
+                name: "TestRecords",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                },
+                constraints: table => table.PrimaryKey("PK_TestRecords", x => x.Id));
+
+            // 8. AspNetRoleClaims
             migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
                 columns: table => new
@@ -131,6 +131,7 @@ namespace InvestmentTracker.Server.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // 9. AspNetUserClaims
             migrationBuilder.CreateTable(
                 name: "AspNetUserClaims",
                 columns: table => new
@@ -152,6 +153,7 @@ namespace InvestmentTracker.Server.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // 10. AspNetUserLogins – ключевые столбцы оставлены nvarchar(450) (не меняем)
             migrationBuilder.CreateTable(
                 name: "AspNetUserLogins",
                 columns: table => new
@@ -172,6 +174,7 @@ namespace InvestmentTracker.Server.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // 11. AspNetUserRoles
             migrationBuilder.CreateTable(
                 name: "AspNetUserRoles",
                 columns: table => new
@@ -196,6 +199,7 @@ namespace InvestmentTracker.Server.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // 12. AspNetUserTokens
             migrationBuilder.CreateTable(
                 name: "AspNetUserTokens",
                 columns: table => new
@@ -216,6 +220,7 @@ namespace InvestmentTracker.Server.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // 13. Securities
             migrationBuilder.CreateTable(
                 name: "Securities",
                 columns: table => new
@@ -238,6 +243,7 @@ namespace InvestmentTracker.Server.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // 14. Accounts
             migrationBuilder.CreateTable(
                 name: "Accounts",
                 columns: table => new
@@ -274,6 +280,7 @@ namespace InvestmentTracker.Server.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // 15. PaymentEvents
             migrationBuilder.CreateTable(
                 name: "PaymentEvents",
                 columns: table => new
@@ -299,6 +306,7 @@ namespace InvestmentTracker.Server.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // 16. Quotes
             migrationBuilder.CreateTable(
                 name: "Quotes",
                 columns: table => new
@@ -321,6 +329,7 @@ namespace InvestmentTracker.Server.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // 17. PortfolioItem
             migrationBuilder.CreateTable(
                 name: "PortfolioItem",
                 columns: table => new
@@ -355,6 +364,7 @@ namespace InvestmentTracker.Server.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // 18. Transactions
             migrationBuilder.CreateTable(
                 name: "Transactions",
                 columns: table => new
@@ -392,104 +402,26 @@ namespace InvestmentTracker.Server.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateIndex(
-                name: "IX_Accounts_BrokerId",
-                table: "Accounts",
-                column: "BrokerId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Accounts_CurrencyId",
-                table: "Accounts",
-                column: "CurrencyId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Accounts_UserId",
-                table: "Accounts",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AspNetRoleClaims_RoleId",
-                table: "AspNetRoleClaims",
-                column: "RoleId");
-
-            migrationBuilder.CreateIndex(
-                name: "RoleNameIndex",
-                table: "AspNetRoles",
-                column: "NormalizedName",
-                unique: true,
-                filter: "[NormalizedName] IS NOT NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AspNetUserClaims_UserId",
-                table: "AspNetUserClaims",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AspNetUserLogins_UserId",
-                table: "AspNetUserLogins",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AspNetUserRoles_RoleId",
-                table: "AspNetUserRoles",
-                column: "RoleId");
-
-            migrationBuilder.CreateIndex(
-                name: "EmailIndex",
-                table: "AspNetUsers",
-                column: "NormalizedEmail");
-
-            migrationBuilder.CreateIndex(
-                name: "UserNameIndex",
-                table: "AspNetUsers",
-                column: "NormalizedUserName",
-                unique: true,
-                filter: "[NormalizedUserName] IS NOT NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PaymentEvents_SecurityId",
-                table: "PaymentEvents",
-                column: "SecurityId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PortfolioItem_AccountId",
-                table: "PortfolioItem",
-                column: "AccountId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PortfolioItem_SecurityId",
-                table: "PortfolioItem",
-                column: "SecurityId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PortfolioItem_UserId",
-                table: "PortfolioItem",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Quotes_SecurityId",
-                table: "Quotes",
-                column: "SecurityId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Securities_AssetTypeId",
-                table: "Securities",
-                column: "AssetTypeId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Transactions_AccountId",
-                table: "Transactions",
-                column: "AccountId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Transactions_SecurityId",
-                table: "Transactions",
-                column: "SecurityId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Transactions_UserId",
-                table: "Transactions",
-                column: "UserId");
+            // Индексы
+            migrationBuilder.CreateIndex("IX_Accounts_BrokerId", "Accounts", "BrokerId");
+            migrationBuilder.CreateIndex("IX_Accounts_CurrencyId", "Accounts", "CurrencyId");
+            migrationBuilder.CreateIndex("IX_Accounts_UserId", "Accounts", "UserId");
+            migrationBuilder.CreateIndex("IX_AspNetRoleClaims_RoleId", "AspNetRoleClaims", "RoleId");
+            migrationBuilder.CreateIndex("RoleNameIndex", "AspNetRoles", "NormalizedName", unique: true, filter: "[NormalizedName] IS NOT NULL");
+            migrationBuilder.CreateIndex("IX_AspNetUserClaims_UserId", "AspNetUserClaims", "UserId");
+            migrationBuilder.CreateIndex("IX_AspNetUserLogins_UserId", "AspNetUserLogins", "UserId");
+            migrationBuilder.CreateIndex("IX_AspNetUserRoles_RoleId", "AspNetUserRoles", "RoleId");
+            migrationBuilder.CreateIndex("EmailIndex", "AspNetUsers", "NormalizedEmail");
+            migrationBuilder.CreateIndex("UserNameIndex", "AspNetUsers", "NormalizedUserName", unique: true, filter: "[NormalizedUserName] IS NOT NULL");
+            migrationBuilder.CreateIndex("IX_PaymentEvents_SecurityId", "PaymentEvents", "SecurityId");
+            migrationBuilder.CreateIndex("IX_PortfolioItem_AccountId", "PortfolioItem", "AccountId");
+            migrationBuilder.CreateIndex("IX_PortfolioItem_SecurityId", "PortfolioItem", "SecurityId");
+            migrationBuilder.CreateIndex("IX_PortfolioItem_UserId", "PortfolioItem", "UserId");
+            migrationBuilder.CreateIndex("IX_Quotes_SecurityId", "Quotes", "SecurityId");
+            migrationBuilder.CreateIndex("IX_Securities_AssetTypeId", "Securities", "AssetTypeId");
+            migrationBuilder.CreateIndex("IX_Transactions_AccountId", "Transactions", "AccountId");
+            migrationBuilder.CreateIndex("IX_Transactions_SecurityId", "Transactions", "SecurityId");
+            migrationBuilder.CreateIndex("IX_Transactions_UserId", "Transactions", "UserId");
         }
 
         /// <inheritdoc />
@@ -521,6 +453,9 @@ namespace InvestmentTracker.Server.Migrations
 
             migrationBuilder.DropTable(
                 name: "Quotes");
+
+            migrationBuilder.DropTable(
+                name: "TestRecords");
 
             migrationBuilder.DropTable(
                 name: "Transactions");
