@@ -13,6 +13,17 @@ namespace InvestmentTracker.Server.Controllers
     [ApiController]
     public class AdminController : ControllerBase
     {
+        private readonly ApplicationDbContext _context;
+        [HttpGet("test-records")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<List<TestRecordDto>>> GetTestRecords()
+        {
+            var records = await _context.TestRecords
+                .Select(r => new TestRecordDto { Id = r.Id, Name = r.Name })
+                .ToListAsync();
+            return Ok(records);
+        }
+
         [HttpPost("fix-migrations")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> FixMigrations()
@@ -138,8 +149,12 @@ namespace InvestmentTracker.Server.Controllers
             return NoContent();
         }
 
-        public AdminController(UserManager<ApplicationUser> userManager, IServiceProvider serviceProvider)
+        public AdminController(
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager,
+            IServiceProvider serviceProvider)
         {
+            _context = context;
             _userManager = userManager;
             _serviceProvider = serviceProvider;
         }

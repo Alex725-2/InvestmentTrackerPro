@@ -35,6 +35,13 @@
                         <a href="/swagger" target="_blank" class="btn btn-sm btn-outline-primary ms-2">@Localizer["Swagger"]</a>
                         <a href="/admin/users" class="btn btn-sm btn-outline-primary ms-2">@Localizer["AdminUsers"]</a>
                         <button class="btn btn-sm btn-outline-secondary ms-2" @onclick="CopyToken">@Localizer["CopyToken"]</button>
+                        @if (!string.IsNullOrEmpty(tokenDisplay))
+                        {
+                            <div class="alert alert-light border mt-2">
+                                <small><strong>JWT Token:</strong></small>
+                                <pre class="mb-0">@tokenDisplay</pre>
+                            </div>
+                        }
                         <button class="btn btn-sm btn-outline-info ms-2" @onclick="RefreshSecurities" disabled="@isRefreshing">
                             @(isRefreshing ? "Обновление..." : "Обновить типы")
                         </button>
@@ -296,6 +303,21 @@
     private MarketSnapshotDto? market;
     private string? globalError, topError, summaryError, historyError;
     private bool copied;
+    private string? tokenDisplay;
+
+    private async Task CopyToken()
+    {
+        var token = await AuthService.GetToken();
+        if (!string.IsNullOrEmpty(token))
+        {
+            await JS.InvokeVoidAsync("copyToClipboard", token);
+            tokenDisplay = "Токен скопирован!";
+        }
+        else
+        {
+            tokenDisplay = "Токен не найден";
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -351,19 +373,7 @@
         // tokenDisplay больше не используется
     }
 
-    private async Task CopyToken()
-    {
-        var token = await AuthService.GetToken();
-        if (!string.IsNullOrEmpty(token))
-        {
-            await JS.InvokeVoidAsync("copyToClipboard", token);
-            copied = true;
-            StateHasChanged();
-            await Task.Delay(3000);
-            copied = false;
-            StateHasChanged();
-        }
-    }
+  
     private string? refreshResult;
 
    

@@ -89,6 +89,12 @@ namespace InvestmentTracker.Server.Data
                 );
                 await context.SaveChangesAsync();
             }
+
+            if (!context.TestRecords.Any())
+            {
+                context.TestRecords.Add(new TestRecord { Name = "Test OK" });
+                await context.SaveChangesAsync();
+            }
         }
     }
 }
