@@ -7,11 +7,16 @@ namespace InvestmentTracker.Server.Services
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<BondMaintenanceService> _logger;
+        private readonly BackgroundJobStatusService _statusService;
 
-        public BondMaintenanceService(IServiceScopeFactory scopeFactory, ILogger<BondMaintenanceService> logger)
+        public BondMaintenanceService(
+            IServiceScopeFactory scopeFactory,
+            ILogger<BondMaintenanceService> logger,
+            BackgroundJobStatusService statusService)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
+            _statusService = statusService;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -20,6 +25,9 @@ namespace InvestmentTracker.Server.Services
 
             while (!stoppingToken.IsCancellationRequested)
             {
+                // Сообщаем светофору, что начался цикл обслуживания облигаций
+                _statusService.SetRunning("bond-maintenance");
+
                 try
                 {
                     using var scope = _scopeFactory.CreateScope();
@@ -39,7 +47,6 @@ namespace InvestmentTracker.Server.Services
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error in bond maintenance.");
-                    // Попытка отправить уведомление об ошибке
                     try
                     {
                         using var scope = _scopeFactory.CreateScope();
@@ -48,9 +55,14 @@ namespace InvestmentTracker.Server.Services
                     }
                     catch { }
                 }
+                finally
+                {
+                    // Завершили (даже если была ошибка)
+                    _statusService.SetCompleted("bond-maintenance");
+                }
 
-                // Следующее обновление через 24 часа
-                await Task.Delay(TimeSpan.FromHours(12), stoppingToken);
+                // Следующее обновление через 12 часов
+                await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
             }
         }
     }

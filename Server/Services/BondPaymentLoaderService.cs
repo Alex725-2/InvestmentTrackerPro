@@ -8,86 +8,102 @@ namespace InvestmentTracker.Server.Services
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<BondPaymentLoaderService> _logger;
+        private readonly BackgroundJobStatusService _statusService;
 
-        public BondPaymentLoaderService(IServiceScopeFactory scopeFactory, ILogger<BondPaymentLoaderService> logger)
+        public BondPaymentLoaderService(
+            IServiceScopeFactory scopeFactory,
+            ILogger<BondPaymentLoaderService> logger,
+            BackgroundJobStatusService statusService)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
+            _statusService = statusService;
         }
 
         public async Task<(int coupons, int amortizations)> LoadAllAsync()
         {
-            using var scope = _scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var moex = scope.ServiceProvider.GetRequiredService<MoexService>();
+            // Сообщаем светофору, что началась загрузка купонов и амортизаций
+            _statusService.SetRunning("bond-payment-update");
 
-            var bonds = await context.Securities
-                .Where(s => s.AssetType.Name == "Облигация")
-                .ToListAsync();
-
-            int totalCoupons = 0;
-            int totalAmorts = 0;
-
-            foreach (var bond in bonds)
+            try
             {
-                // 1. Удаляем ВСЕ будущие купоны и амортизации для этой облигации
-                var oldEvents = await context.PaymentEvents
-                    .Where(e => e.SecurityId == bond.Id && e.Date >= DateTime.Today &&
-                               (e.Type == "Coupon" || e.Type == "Amortization"))
+                using var scope = _scopeFactory.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var moex = scope.ServiceProvider.GetRequiredService<MoexService>();
+
+                var bonds = await context.Securities
+                    .Where(s => s.AssetType.Name == "Облигация")
                     .ToListAsync();
-                context.PaymentEvents.RemoveRange(oldEvents);
 
-                // 2. Получаем актуальную информацию
-                var info = await moex.GetBondPaymentInfoAsync(bond.Ticker);
-                if (info == null) continue;
+                int totalCoupons = 0;
+                int totalAmorts = 0;
 
-                // 3. Генерируем купоны
-                if (info.NextCouponDate.HasValue && info.CouponValue.HasValue && info.CouponFrequency.HasValue)
+                foreach (var bond in bonds)
                 {
-                    var date = info.NextCouponDate.Value;
-                    var endDate = info.MaturityDate ?? date.AddYears(10);
-                    int monthsStep = 12 / info.CouponFrequency.Value;
+                    // 1. Удаляем ВСЕ будущие купоны и амортизации для этой облигации
+                    var oldEvents = await context.PaymentEvents
+                        .Where(e => e.SecurityId == bond.Id && e.Date >= DateTime.Today &&
+                                   (e.Type == "Coupon" || e.Type == "Amortization"))
+                        .ToListAsync();
+                    context.PaymentEvents.RemoveRange(oldEvents);
 
-                    bool first = true;
-                    while (date <= endDate)
+                    // 2. Получаем актуальную информацию
+                    var info = await moex.GetBondPaymentInfoAsync(bond.Ticker);
+                    if (info == null) continue;
+
+                    // 3. Генерируем купоны
+                    if (info.NextCouponDate.HasValue && info.CouponValue.HasValue && info.CouponFrequency.HasValue)
+                    {
+                        var date = info.NextCouponDate.Value;
+                        var endDate = info.MaturityDate ?? date.AddYears(10);
+                        int monthsStep = 12 / info.CouponFrequency.Value;
+
+                        bool first = true;
+                        while (date <= endDate)
+                        {
+                            context.PaymentEvents.Add(new PaymentEvent
+                            {
+                                Ticker = bond.Ticker,
+                                SecurityId = bond.Id,
+                                Date = date,
+                                AmountPerUnit = info.CouponValue.Value,
+                                Currency = info.Currency,
+                                Type = "Coupon",
+                                IsEstimated = !first   // первый купон – подтверждён, остальные – прогноз
+                            });
+                            totalCoupons++;
+                            first = false;
+                            date = date.AddMonths(monthsStep);
+                        }
+                    }
+
+                    // 4. Амортизация (погашение) – используем FACEVALUE
+                    if (info.MaturityDate.HasValue && info.FaceValue.HasValue)
                     {
                         context.PaymentEvents.Add(new PaymentEvent
                         {
                             Ticker = bond.Ticker,
                             SecurityId = bond.Id,
-                            Date = date,
-                            AmountPerUnit = info.CouponValue.Value,
+                            Date = info.MaturityDate.Value,
+                            AmountPerUnit = info.FaceValue.Value,
                             Currency = info.Currency,
-                            Type = "Coupon",
-                            IsEstimated = !first   // первый купон – подтверждён, остальные – прогноз
+                            Type = "Amortization",
+                            IsEstimated = false
                         });
-                        totalCoupons++;
-                        first = false;
-                        date = date.AddMonths(monthsStep);
+                        totalAmorts++;
                     }
                 }
 
-                // 4. Амортизация (погашение) – используем FACEVALUE
-                if (info.MaturityDate.HasValue && info.FaceValue.HasValue)
-                {
-                    context.PaymentEvents.Add(new PaymentEvent
-                    {
-                        Ticker = bond.Ticker,
-                        SecurityId = bond.Id,
-                        Date = info.MaturityDate.Value,
-                        AmountPerUnit = info.FaceValue.Value,   // <-- правильный номинал
-                        Currency = info.Currency,
-                        Type = "Amortization",
-                        IsEstimated = false
-                    });
-                    totalAmorts++;
-                }
+                if (totalCoupons + totalAmorts > 0)
+                    await context.SaveChangesAsync();
+
+                return (totalCoupons, totalAmorts);
             }
-
-            if (totalCoupons + totalAmorts > 0)
-                await context.SaveChangesAsync();
-
-            return (totalCoupons, totalAmorts);
+            finally
+            {
+                // Завершили (даже если была ошибка)
+                _statusService.SetCompleted("bond-payment-update");
+            }
         }
     }
 }

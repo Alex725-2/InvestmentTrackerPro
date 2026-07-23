@@ -6,8 +6,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Hangfire;
-using Hangfire.SqlServer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -114,6 +112,7 @@ builder.Services.AddScoped<QuoteUpdateService>();
 if (!builder.Environment.IsDevelopment())
 {
     builder.Services.AddHostedService<QuoteBackgroundService>();
+    builder.Services.AddHostedService<BondMaintenanceService>();   // <-- добавлено
 }
 
 builder.Services.AddSingleton<SettingsService>();
