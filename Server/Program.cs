@@ -155,8 +155,8 @@ using (var scope = app.Services.CreateScope())
     else
     {
         // На проде выполняем миграции, чтобы не потерять данные
-        db.Database.Migrate();
-        //db.Database.EnsureCreated();
+        //db.Database.Migrate();
+        db.Database.EnsureCreated();
     }
 }
 

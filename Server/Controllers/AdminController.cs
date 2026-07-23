@@ -84,12 +84,12 @@ namespace InvestmentTracker.Server.Controllers
                 "CREATE TABLE IF NOT EXISTS __EFMigrationsHistory (MigrationId TEXT PRIMARY KEY, ProductVersion TEXT);"
             );
             // Вставляем записи о выполненных миграциях (имена бери из своих файлов миграций)
-            await _context.Database.ExecuteSqlRawAsync(
-                "INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ('20260723104024_InitialCreate', '8.0.0');"
-            );
             //await _context.Database.ExecuteSqlRawAsync(
-            //    "INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ('20260723114044_AddTestRecord', '8.0.0');"
+            //    "INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ('20260723104024_InitialCreate', '8.0.0');"
             //);
+            await _context.Database.ExecuteSqlRawAsync(
+                "INSERT OR IGNORE INTO __EFMigrationsHistory (MigrationId, ProductVersion) VALUES ('20260723114044_AddTestRecord', '8.0.0');"
+            );
             return Ok("История миграций исправлена.");
         }
 
