@@ -1,4 +1,4 @@
-using InvestmentTracker.Server.Data;
+п»їusing InvestmentTracker.Server.Data;
 using InvestmentTracker.Server.Models;
 using InvestmentTracker.Server.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -11,24 +11,22 @@ using Hangfire.SqlServer;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
-// База данных
+// ===================== 1. Р‘РђР—Рђ Р”РђРќРќР«РҐ =====================
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (builder.Environment.IsDevelopment())
 {
-    // Локально используем SQL Server (LocalDB)
+    // Р›РѕРєР°Р»СЊРЅРѕ: SQL Server (LocalDB)
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
         options.UseSqlServer(connectionString));
 }
 else
 {
-    // В продакшене (VPS) используем SQLite
+    // РџСЂРѕРґР°РєС€РµРЅ: SQLite, РїСѓС‚СЊ Р±РµСЂС‘С‚СЃСЏ РёР· РїРµСЂРµРјРµРЅРЅРѕР№ РѕРєСЂСѓР¶РµРЅРёСЏ (СЃРј. systemdвЂ‘СЋРЅРёС‚)
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseSqlite("Data Source=investmenttracker.db"));
+        options.UseSqlite(connectionString));
 }
 
-// Identity
+// ===================== 2. IDENTITY =====================
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit = false;
@@ -40,7 +38,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-// JWT Authentication
+// ===================== 3. JWTвЂ‘РђРЈРўР•РќРўРР¤РРљРђР¦РРЇ =====================
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var key = Encoding.ASCII.GetBytes(jwtSettings["Key"]!);
 
@@ -67,7 +65,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
-// Swagger
+// ===================== 4. SWAGGER =====================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -100,7 +98,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Hangfire – только локально, в продакшене отключаем (несовместим с SQLite)
+// ===================== 5. HANGFIRE (С‚РѕР»СЊРєРѕ Р»РѕРєР°Р»СЊРЅРѕ) =====================
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddHangfire(config =>
@@ -120,18 +118,18 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddHangfireServer();
 }
 
-// Регистрация сервисов
+// ===================== 6. Р Р•Р“РРЎРўР РђР¦РРЇ РЎР•Р Р’РРЎРћР’ =====================
 builder.Services.AddHttpClient<MoexService>();
 builder.Services.AddScoped<QuoteUpdateService>();
 
-// Фоновое обновление котировок (вместо Hangfire для Production)
-if (!builder.Environment.IsDevelopment()) // или builder.Environment.IsProduction()
+// Р¤РѕРЅРѕРІС‹Рµ СЃРµСЂРІРёСЃС‹ (С‚РѕР»СЊРєРѕ РЅР° РїСЂРѕРґРµ)
+if (!builder.Environment.IsDevelopment())
 {
     builder.Services.AddHostedService<QuoteBackgroundService>();
-    //builder.Services.AddHostedService<BondMaintenanceService>();
-    builder.Services.AddHostedService<SecuritiesSyncService>();
-    // и другие сервисы, которые не нужны при разработке
+    // BondMaintenanceService РІСЂРµРјРµРЅРЅРѕ РѕС‚РєР»СЋС‡С‘РЅ, С‡С‚РѕР±С‹ РёР·Р±РµР¶Р°С‚СЊ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ
+    // builder.Services.AddHostedService<BondMaintenanceService>();
 }
+
 builder.Services.AddSingleton<SettingsService>();
 builder.Services.AddHostedService<DividendUpdateService>();
 builder.Services.AddScoped<DividendLoaderService>();
@@ -141,21 +139,30 @@ builder.Services.AddSingleton<IEmailService, EmailService>();
 
 var app = builder.Build();
 
-// Применение миграций (автоматически) и создание базы данных при необходимости
+// ===================== 7. РџР РРњР•РќР•РќРР• РњРР“Р РђР¦РР™ / РЎРћР—Р”РђРќРР• Р‘Р” =====================
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    // db.Database.Migrate();
-    db.Database.EnsureCreated();
+    if (app.Environment.IsDevelopment())
+    {
+        // Р’ СЂР°Р·СЂР°Р±РѕС‚РєРµ РїСЂРѕСЃС‚Рѕ РїРµСЂРµСЃРѕР·РґР°С‘Рј Р±Р°Р·Сѓ РїРѕ РјРѕРґРµР»Рё (Р±С‹СЃС‚СЂРѕ Рё СѓРґРѕР±РЅРѕ)
+        db.Database.EnsureCreated();
+    }
+    else
+    {
+        // РќР° РїСЂРѕРґРµ РІС‹РїРѕР»РЅСЏРµРј РјРёРіСЂР°С†РёРё, С‡С‚РѕР±С‹ РЅРµ РїРѕС‚РµСЂСЏС‚СЊ РґР°РЅРЅС‹Рµ
+        db.Database.Migrate();
+    }
 }
 
-// Логирование
+// ===================== 8. Р›РћР“РР РћР’РђРќРР• =====================
 app.Logger.LogInformation("Application starting...");
 
-// Swagger
+// ===================== 9. SWAGGER (РґРѕСЃС‚СѓРїРµРЅ РІСЃРµРіРґР°) =====================
 app.UseSwagger();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Investment Tracker API v1"));
 
+// ===================== 10. РћР‘Р РђР‘РћРўРљРђ РћРЁРР‘РћРљ Р HTTPS =====================
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
@@ -168,16 +175,17 @@ else
 
 app.UseHttpsRedirection();
 
-
+// ===================== 11. РЎРўРђРўРР§Р•РЎРљРР• Р¤РђР™Р›Р« Р Blazor =====================
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
 
+// ===================== 12. РњРђР РЁР РЈРўРР—РђР¦РРЇ, РђРЈРўР•РќРўРР¤РРљРђР¦РРЇ, РђР’РўРћР РР—РђР¦РРЇ =====================
 app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Hangfire Dashboard и повторяющиеся задачи – только в Dev
+// ===================== 13. HANGFIRE DASHBOARD (С‚РѕР»СЊРєРѕ Р»РѕРєР°Р»СЊРЅРѕ) =====================
 if (app.Environment.IsDevelopment())
 {
     app.UseHangfireDashboard("/hangfire");
@@ -188,12 +196,13 @@ if (app.Environment.IsDevelopment())
         "*/15 * * * *");
 }
 
+// ===================== 14. РљРћРќРўР РћР›Р›Р•Р Р«, RAZOR PAGES, SEOвЂ‘MIDDLEWARE =====================
 app.MapRazorPages();
 app.MapControllers();
 app.UseMiddleware<InvestmentTracker.Server.Middleware.SeoMiddleware>();
 app.MapFallbackToFile("index.html");
 
-// Создаём роли и администратора
+// ===================== 15. РќРђР§РђР›Р¬РќР«Р• Р”РђРќРќР«Р• (SEED) =====================
 using (var innerScope = app.Services.CreateScope())
 {
     var serviceProvider = innerScope.ServiceProvider;
