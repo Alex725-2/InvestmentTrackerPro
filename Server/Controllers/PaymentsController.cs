@@ -117,6 +117,7 @@ namespace InvestmentTracker.Server.Controllers
                 }
             }
 
+
             return Ok(events);
         }
     }
