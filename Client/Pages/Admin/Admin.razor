@@ -11,6 +11,30 @@
 @inject NavigationManager Navigation
 
 <h3>@Localizer["AdminPanel"]</h3>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5>@Localizer["MigrationHistory"]</h5>
+        <button class="btn btn-secondary mb-2" @onclick="LoadMigrationHistory">@Localizer["Refresh"]</button>
+        @if (migrationHistory != null && migrationHistory.Count > 0)
+        {
+            <table class="table table-sm">
+                <thead><tr><th>MigrationId</th><th>ProductVersion</th></tr></thead>
+                <tbody>
+                    @foreach (var m in migrationHistory)
+                    {
+                        <tr><td>@m.MigrationId</td><td>@m.ProductVersion</td></tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>@Localizer["NoMigrations"]</p>
+        }
+    </div>
+</div>
+
 <div class="card mb-4">
     <div class="card-body">
         <h5>Test Table</h5>
@@ -204,6 +228,16 @@
     private bool clearPaymentsSuccess;
     private string debugIsin = "";
     private string? debugBondResult;
+
+    private List<MigrationHistoryDto>? migrationHistory;
+    private async Task LoadMigrationHistory()
+    {
+        try
+        {
+            migrationHistory = await Http.GetFromJsonAsync<List<MigrationHistoryDto>>("api/admin/migration-history");
+        }
+        catch { migrationHistory = new(); }
+    }
 
     private async Task DebugBondByIsin()
     {

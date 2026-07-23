@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace InvestmentTracker.Server.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260723113010_AddTestRecord")]
+    [Migration("20260723114044_AddTestRecord")]
     partial class AddTestRecord
     {
         /// <inheritdoc />
