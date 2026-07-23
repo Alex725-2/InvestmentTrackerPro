@@ -128,7 +128,7 @@ builder.Services.AddScoped<QuoteUpdateService>();
 if (!builder.Environment.IsDevelopment()) // или builder.Environment.IsProduction()
 {
     builder.Services.AddHostedService<QuoteBackgroundService>();
-    builder.Services.AddHostedService<BondMaintenanceService>();
+    //builder.Services.AddHostedService<BondMaintenanceService>();
     builder.Services.AddHostedService<SecuritiesSyncService>();
     // и другие сервисы, которые не нужны при разработке
 }
