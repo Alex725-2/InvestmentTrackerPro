@@ -354,7 +354,7 @@
 
         try
         {
-            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) }; // может быть долго
+            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(20) }; // может быть долго
             client.BaseAddress = new Uri(Navigation.BaseUri);
             var token = await AuthService.GetToken();
             if (!string.IsNullOrEmpty(token))

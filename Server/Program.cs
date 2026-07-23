@@ -167,7 +167,7 @@ else
 
 app.UseHttpsRedirection();
 
-app.UseMiddleware<InvestmentTracker.Server.Middleware.SeoMiddleware>();
+
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
 
@@ -189,6 +189,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapRazorPages();
 app.MapControllers();
+app.UseMiddleware<InvestmentTracker.Server.Middleware.SeoMiddleware>();
 app.MapFallbackToFile("index.html");
 
 // Создаём роли и администратора
