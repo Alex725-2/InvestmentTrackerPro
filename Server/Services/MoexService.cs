@@ -1,8 +1,6 @@
 ﻿using InvestmentTracker.Shared.Models;
 using System.Globalization;
-using System.Net.Http.Json;
 using System.Text.Json;
-using System.Globalization;
 
 namespace InvestmentTracker.Server.Services
 {
