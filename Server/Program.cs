@@ -24,10 +24,14 @@ else
     // Продакшен: SQLite, путь берётся из переменной окружения (см. systemd‑юнит)
     //builder.Services.AddDbContext<ApplicationDbContext>(options =>
     //    options.UseSqlite(connectionString));
-        // Продакшен: SQLite, путь к файлу БД задан жёстко,
-        // чтобы не зависеть от переменной окружения.
-        builder.Services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseSqlite("Data Source=/opt/investment-tracker-pro/app-data/investmenttracker-pro.db"));
+    // Продакшен: SQLite, путь к файлу БД задан жёстко,
+    // чтобы не зависеть от переменной окружения.
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlite("Data Source=/opt/investment-tracker-pro/app-data/investmenttracker-pro.db"));
+
+    // Продакшен: SQLite, файл в app-data
+    //builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    //        options.UseSqlite("Data Source=/opt/investment-tracker-pro/app-data/investmenttracker.db"));
 }
 
 // ===================== 2. IDENTITY =====================
@@ -155,8 +159,8 @@ using (var scope = app.Services.CreateScope())
     else
     {
         // На проде выполняем миграции, чтобы не потерять данные
-        db.Database.Migrate();
-        //db.Database.EnsureCreated();
+        //db.Database.Migrate();
+        db.Database.EnsureCreated();
     }
 }
 

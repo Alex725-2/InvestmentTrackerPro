@@ -178,5 +178,8 @@
 <data name="NoUpcomingPayments" xml:space="preserve"><value>Нет предстоящих выплат</value></data>
 <data name="NotifyNewUser" xml:space="preserve"><value>Уведомление о новых пользователях</value></data>
 <data name="HidePast" xml:space="preserve"><value>Скрыть прошедшие</value></data>
+
+<data name="DatabaseInfo" xml:space="preserve"><value>Информация о базе данных</value></data>
+<data name="CheckDatabase" xml:space="preserve"><value>Проверить БД</value></data>
   
 </root>

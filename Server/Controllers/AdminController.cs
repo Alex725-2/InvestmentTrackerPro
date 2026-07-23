@@ -93,6 +93,62 @@ namespace InvestmentTracker.Server.Controllers
             return Ok("История миграций исправлена.");
         }
 
+        [HttpGet("db-info")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetDatabaseInfo()
+        {
+            var context = _serviceProvider.GetRequiredService<ApplicationDbContext>();
+            var connection = context.Database.GetDbConnection();
+            var dbProvider = context.Database.ProviderName;
+            var connectionString = connection.ConnectionString;
+
+            // Проверяем существование файла SQLite (если используется SQLite)
+            string? filePath = null;
+            bool fileExists = false;
+            if (dbProvider.Contains("Sqlite"))
+            {
+                // Извлекаем путь к файлу из строки подключения
+                var match = System.Text.RegularExpressions.Regex.Match(connectionString, @"Data Source=(.*?)(?:;|$)");
+                if (match.Success)
+                {
+                    filePath = match.Groups[1].Value;
+                    fileExists = System.IO.File.Exists(filePath);
+                }
+            }
+
+            // История миграций
+            List<MigrationHistoryDto> migrations = new();
+            try
+            {
+                await connection.OpenAsync();
+                var cmd = connection.CreateCommand();
+                cmd.CommandText = "SELECT MigrationId, ProductVersion FROM __EFMigrationsHistory";
+                var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    migrations.Add(new MigrationHistoryDto
+                    {
+                        MigrationId = reader.GetString(0),
+                        ProductVersion = reader.GetString(1)
+                    });
+                }
+                await connection.CloseAsync();
+            }
+            catch
+            {
+                // Таблицы __EFMigrationsHistory может не существовать
+            }
+
+            return Ok(new
+            {
+                Provider = dbProvider,
+                ConnectionString = connectionString.Replace("Password=", "Password=****"), // скрываем пароль
+                FilePath = filePath,
+                FileExists = fileExists,
+                Migrations = migrations
+            });
+        }
+
         [HttpGet("migration-history")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<List<MigrationHistoryDto>>> GetMigrationHistory()

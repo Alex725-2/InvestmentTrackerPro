@@ -11,7 +11,16 @@
 @inject NavigationManager Navigation
 
 <h3>@Localizer["AdminPanel"]</h3>
-
+<div class="card mb-4">
+    <div class="card-body">
+        <h5>@Localizer["DatabaseInfo"]</h5>
+        <button class="btn btn-secondary" @onclick="LoadDatabaseInfo">@Localizer["CheckDatabase"]</button>
+        @if (!string.IsNullOrEmpty(dbInfoJson))
+        {
+            <pre class="mt-2 bg-light p-2">@dbInfoJson</pre>
+        }
+    </div>
+</div>
 <div class="card mb-4">
     <div class="card-body">
         <h5>@Localizer["MigrationHistory"]</h5>
@@ -228,6 +237,27 @@
     private bool clearPaymentsSuccess;
     private string debugIsin = "";
     private string? debugBondResult;
+    private string? dbInfoJson;
+
+    private async Task LoadDatabaseInfo()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/admin/db-info");
+            if (response.IsSuccessStatusCode)
+            {
+                dbInfoJson = await response.Content.ReadAsStringAsync();
+            }
+            else
+            {
+                dbInfoJson = $"Ошибка: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            dbInfoJson = $"Ошибка: {ex.Message}";
+        }
+    }
 
     private List<MigrationHistoryDto>? migrationHistory;
     private async Task LoadMigrationHistory()
