@@ -123,6 +123,8 @@ builder.Services.AddScoped<BondLoaderService>();
 builder.Services.AddScoped<BondPaymentLoaderService>();
 builder.Services.AddSingleton<IEmailService, EmailService>();
 
+builder.Services.AddSingleton<BackgroundJobStatusService>();
+
 var app = builder.Build();
 
 // ===================== 7. ПРИМЕНЕНИЕ МИГРАЦИЙ =====================

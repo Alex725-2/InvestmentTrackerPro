@@ -9,80 +9,93 @@ namespace InvestmentTracker.Server.Services
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<BondLoaderService> _logger;
+        private readonly BackgroundJobStatusService _statusService;
 
-        public BondLoaderService(IServiceScopeFactory scopeFactory, ILogger<BondLoaderService> logger)
+        public BondLoaderService(IServiceScopeFactory scopeFactory, ILogger<BondLoaderService> logger, BackgroundJobStatusService statusService)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
+            _statusService = statusService;
         }
 
         public async Task<int> LoadBondsAsync(string board = "TQCB,TQOB")
         {
-            int added = 0;
+            _statusService.SetRunning("load-bonds");
             var boards = board.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var httpClient = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>().CreateClient("Moex");
-
-            foreach (var b in boards)
+            int added = 0;
+            try
             {
-                var url = $"https://iss.moex.com/iss/engines/stock/markets/bonds/boards/{b}/securities.json" +
-                          "?iss.only=securities&securities.columns=SECID,SHORTNAME,ISIN";
 
-                try
+               
+
+                foreach (var b in boards)
                 {
-                    using var stream = await httpClient.GetStreamAsync(url);
-                    using var doc = await JsonDocument.ParseAsync(stream);
+                    var url = $"https://iss.moex.com/iss/engines/stock/markets/bonds/boards/{b}/securities.json" +
+                              "?iss.only=securities&securities.columns=SECID,SHORTNAME,ISIN";
 
-                    var root = doc.RootElement;
-                    if (!root.TryGetProperty("securities", out var securitiesBlock))
-                        continue;
-
-                    if (!securitiesBlock.TryGetProperty("data", out var data) || data.GetArrayLength() == 0)
-                        continue;
-
-                    var columns = securitiesBlock.GetProperty("columns");
-                    int secidIdx = FindColumnIndex(columns, "SECID");
-                    int nameIdx = FindColumnIndex(columns, "SHORTNAME");
-                    int isinIdx = FindColumnIndex(columns, "ISIN");
-
-                    if (secidIdx == -1 || nameIdx == -1) continue;
-
-                    foreach (var row in data.EnumerateArray())
+                    try
                     {
-                        var ticker = row[secidIdx].GetString();
-                        var name = row[nameIdx].GetString();
-                        var isin = isinIdx >= 0 ? row[isinIdx].GetString() : null;
+                        using var stream = await httpClient.GetStreamAsync(url);
+                        using var doc = await JsonDocument.ParseAsync(stream);
 
-                        if (string.IsNullOrWhiteSpace(ticker) || string.IsNullOrWhiteSpace(name))
+                        var root = doc.RootElement;
+                        if (!root.TryGetProperty("securities", out var securitiesBlock))
                             continue;
 
-                        // Проверяем, нет ли уже такой бумаги
-                        var exists = await context.Securities.AnyAsync(s => s.Ticker == ticker);
-                        if (!exists)
+                        if (!securitiesBlock.TryGetProperty("data", out var data) || data.GetArrayLength() == 0)
+                            continue;
+
+                        var columns = securitiesBlock.GetProperty("columns");
+                        int secidIdx = FindColumnIndex(columns, "SECID");
+                        int nameIdx = FindColumnIndex(columns, "SHORTNAME");
+                        int isinIdx = FindColumnIndex(columns, "ISIN");
+
+                        if (secidIdx == -1 || nameIdx == -1) continue;
+
+                        foreach (var row in data.EnumerateArray())
                         {
-                            context.Securities.Add(new Security
+                            var ticker = row[secidIdx].GetString();
+                            var name = row[nameIdx].GetString();
+                            var isin = isinIdx >= 0 ? row[isinIdx].GetString() : null;
+
+                            if (string.IsNullOrWhiteSpace(ticker) || string.IsNullOrWhiteSpace(name))
+                                continue;
+
+                            // Проверяем, нет ли уже такой бумаги
+                            var exists = await context.Securities.AnyAsync(s => s.Ticker == ticker);
+                            if (!exists)
                             {
-                                Ticker = ticker!,
-                                Name = name!,
-                                Isin = isin,
-                                AssetTypeId = 2   // Облигация
-                            });
-                            added++;
+                                context.Securities.Add(new Security
+                                {
+                                    Ticker = ticker!,
+                                    Name = name!,
+                                    Isin = isin,
+                                    AssetTypeId = 2   // Облигация
+                                });
+                                added++;
+                            }
                         }
                     }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Ошибка загрузки облигаций с доски {Board}", b);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Ошибка загрузки облигаций с доски {Board}", b);
-                }
+            }
+            finally
+            {
+                _statusService.SetCompleted("load-bonds");
             }
 
             if (added > 0)
                 await context.SaveChangesAsync();
 
             return added;
+
         }
 
         private int FindColumnIndex(JsonElement columns, string name)

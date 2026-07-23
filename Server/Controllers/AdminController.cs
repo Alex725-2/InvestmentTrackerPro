@@ -186,9 +186,45 @@ namespace InvestmentTracker.Server.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> LoadBonds()
         {
-            var loader = _serviceProvider.GetRequiredService<BondLoaderService>();
-            int added = await loader.LoadBondsAsync();
-            return Ok(new { Added = added });
+            var statusService = _serviceProvider.GetRequiredService<BackgroundJobStatusService>();
+            var jobName = "load-bonds";
+            if (statusService.GetAllStatuses().TryGetValue(jobName, out var status) && status.IsRunning)
+            {
+                return BadRequest("Загрузка облигаций уже выполняется. Дождитесь завершения.");
+            }
+
+            statusService.SetRunning(jobName);
+            try
+            {
+                var loader = _serviceProvider.GetRequiredService<BondLoaderService>();
+                int added = await loader.LoadBondsAsync();
+                statusService.SetCompleted(jobName);
+                return Ok(new { Added = added });
+            }
+            catch (Exception ex)
+            {
+                statusService.SetCompleted(jobName);
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+
+
+        [HttpGet("background-jobs-status")]
+        [Authorize(Roles = "Admin")]
+        public IActionResult GetBackgroundJobsStatus()
+        {
+            var statusService = _serviceProvider.GetRequiredService<BackgroundJobStatusService>();
+            var statuses = statusService.GetAllStatuses()
+                .ToDictionary(
+                    kv => kv.Key,
+                    kv => new BackgroundJobStatusDto
+                    {
+                        IsRunning = kv.Value.IsRunning,
+                        LastStarted = kv.Value.LastStarted,
+                        LastCompleted = kv.Value.LastCompleted
+                    });
+            return Ok(statuses);
         }
 
         [HttpPost("load-bond-payments")]

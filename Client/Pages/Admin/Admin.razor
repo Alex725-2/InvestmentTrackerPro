@@ -11,6 +11,8 @@
 @inject NavigationManager Navigation
 
 <h3>@Localizer["AdminPanel"]</h3>
+
+@* ==================== ИНФОРМАЦИЯ О БД ==================== *@
 <div class="card mb-4">
     <div class="card-body">
         <h5>@Localizer["DatabaseInfo"]</h5>
@@ -22,8 +24,48 @@
     </div>
 </div>
 
+@* ==================== ФОНОВЫЕ ПРОЦЕССЫ (СВЕТОФОР) ==================== *@
+<div class="card mb-4">
+    <div class="card-body">
+        <h5>@Localizer["BackgroundJobs"]</h5>
+        <button class="btn btn-secondary mb-3" @onclick="RefreshJobStatuses">@Localizer["Refresh"]</button>
+        @if (jobStatuses != null)
+        {
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>@Localizer["JobName"]</th>
+                        <th>@Localizer["Status"]</th>
+                        <th>@Localizer["LastStarted"]</th>
+                        <th>@Localizer["LastCompleted"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var kv in jobStatuses)
+                    {
+                        var job = kv.Value;
+                        <tr>
+                            <td>@kv.Key</td>
+                            <td>
+                                <span class="badge @(job.IsRunning ? "bg-warning text-dark" : "bg-success")">
+                                    @(job.IsRunning? Localizer["Running"] : Localizer["Idle"])
+                                </span>
+                            </td>
+                            <td>@(job.LastStarted?.ToString("G") ?? "—")</td>
+                            <td>@(job.LastCompleted?.ToString("G") ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>@Localizer["NoData"]</p>
+        }
+    </div>
+</div>
 
-<!-- Загрузка дивидендов -->
+@* ==================== ЗАГРУЗКА ДИВИДЕНДОВ ==================== *@
 <div class="card mb-4">
     <div class="card-body">
         <h5>@Localizer["LoadDividends"]</h5>
@@ -60,7 +102,7 @@
     </div>
 </div>
 
-<!-- Загрузка облигаций -->
+@* ==================== ЗАГРУЗКА ОБЛИГАЦИЙ ==================== *@
 <div class="card mb-4">
     <div class="card-body">
         <h5>@Localizer["LoadBonds"]</h5>
@@ -81,7 +123,7 @@
     </div>
 </div>
 
-<!-- Загрузка купонов/амортизаций -->
+@* ==================== ЗАГРУЗКА КУПОНОВ/АМОРТИЗАЦИЙ ==================== *@
 <div class="card mb-4">
     <div class="card-body">
         <h5>@Localizer["LoadBondPayments"]</h5>
@@ -102,7 +144,7 @@
     </div>
 </div>
 
-<!-- Диагностика одной облигации -->
+@* ==================== ДИАГНОСТИКА ОБЛИГАЦИИ ==================== *@
 <div class="card mb-4">
     <div class="card-body">
         <h5>Диагностика облигации</h5>
@@ -120,61 +162,69 @@
             <pre class="mt-2 bg-light p-2">@debugResult</pre>
         }
     </div>
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5>Уведомления</h5>
-            <button class="btn btn-secondary" @onclick="SendTestEmail">Отправить тестовое письмо</button>
-            @if (!string.IsNullOrEmpty(testEmailResult))
-            {
-                <div class="alert @(testEmailSuccess ? "alert-success" : "alert-danger") mt-2">@testEmailResult</div>
-            }
-        </div>
-    </div>
+</div>
 
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5>@Localizer["Settings"]</h5>
-            <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="notifyNewUser" checked="@notifyNewUser" @onchange="ToggleNotifyNewUser" />
-                <label class="form-check-label" for="notifyNewUser">@Localizer["NotifyNewUser"]</label>
-            </div>
-        </div>
+@* ==================== УВЕДОМЛЕНИЯ ==================== *@
+<div class="card mb-4">
+    <div class="card-body">
+        <h5>Уведомления</h5>
+        <button class="btn btn-secondary" @onclick="SendTestEmail">Отправить тестовое письмо</button>
+        @if (!string.IsNullOrEmpty(testEmailResult))
+        {
+            <div class="alert @(testEmailSuccess ? "alert-success" : "alert-danger") mt-2">@testEmailResult</div>
+        }
     </div>
+</div>
 
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5>Очистка выплат</h5>
-            <p class="text-muted">Удаляет все записи из таблицы PaymentEvents. Используйте с осторожностью.</p>
-            <button class="btn btn-danger" @onclick="ClearPayments" disabled="@isClearing">
-                @(isClearing ? "Удаление..." : "Очистить все выплаты")
-            </button>
-            @if (!string.IsNullOrEmpty(clearPaymentsMessage))
-            {
-                <div class="alert @(clearPaymentsSuccess ? "alert-success" : "alert-danger") mt-2">@clearPaymentsMessage</div>
-            }
-        </div>
-    </div>
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5>Диагностика по ISIN (загрузить купоны/амортизации для конкретной бумаги)</h5>
-            <div class="row">
-                <div class="col-md-4">
-                    <label>ISIN или тикер</label>
-                    <input @bind="debugIsin" class="form-control" placeholder="RU000A10CU55" />
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button class="btn btn-secondary" @onclick="DebugBondByIsin">Загрузить</button>
-                </div>
-            </div>
-            @if (!string.IsNullOrEmpty(debugBondResult))
-            {
-                <pre class="mt-2 bg-light p-2">@debugBondResult</pre>
-            }
+@* ==================== НАСТРОЙКИ ==================== *@
+<div class="card mb-4">
+    <div class="card-body">
+        <h5>@Localizer["Settings"]</h5>
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="notifyNewUser" checked="@notifyNewUser" @onchange="ToggleNotifyNewUser" />
+            <label class="form-check-label" for="notifyNewUser">@Localizer["NotifyNewUser"]</label>
         </div>
     </div>
 </div>
 
+@* ==================== ОЧИСТКА ВЫПЛАТ ==================== *@
+<div class="card mb-4">
+    <div class="card-body">
+        <h5>Очистка выплат</h5>
+        <p class="text-muted">Удаляет все записи из таблицы PaymentEvents. Используйте с осторожностью.</p>
+        <button class="btn btn-danger" @onclick="ClearPayments" disabled="@isClearing">
+            @(isClearing ? "Удаление..." : "Очистить все выплаты")
+        </button>
+        @if (!string.IsNullOrEmpty(clearPaymentsMessage))
+        {
+            <div class="alert @(clearPaymentsSuccess ? "alert-success" : "alert-danger") mt-2">@clearPaymentsMessage</div>
+        }
+    </div>
+</div>
+
+@* ==================== ДИАГНОСТИКА ПО ISIN ==================== *@
+<div class="card mb-4">
+    <div class="card-body">
+        <h5>Диагностика по ISIN (загрузить купоны/амортизации для конкретной бумаги)</h5>
+        <div class="row">
+            <div class="col-md-4">
+                <label>ISIN или тикер</label>
+                <input @bind="debugIsin" class="form-control" placeholder="RU000A10CU55" />
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-secondary" @onclick="DebugBondByIsin">Загрузить</button>
+            </div>
+        </div>
+        @if (!string.IsNullOrEmpty(debugBondResult))
+        {
+            <pre class="mt-2 bg-light p-2">@debugBondResult</pre>
+        }
+    </div>
+</div>
+
+@* ==================== CODE ==================== *@
 @code {
+    // Состояния для загрузок
     private int selectedMonth = DateTime.Now.Month;
     private int selectedYear = DateTime.Now.Year;
     private bool isDividendsLoading;
@@ -200,10 +250,36 @@
     private bool isClearing;
     private string? clearPaymentsMessage;
     private bool clearPaymentsSuccess;
+
     private string debugIsin = "";
     private string? debugBondResult;
-    private string? dbInfoJson;
 
+    private string? dbInfoJson;
+    private Dictionary<string, BackgroundJobStatusDto>? jobStatuses;
+    private List<TestRecordDto>? testData;
+
+    // ---------- Инициализация ----------
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTestData();
+        await LoadSettings();
+    }
+
+    // ---------- Фоновые процессы ----------
+    private async Task RefreshJobStatuses()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/admin/background-jobs-status");
+            if (response.IsSuccessStatusCode)
+            {
+                jobStatuses = await response.Content.ReadFromJsonAsync<Dictionary<string, BackgroundJobStatusDto>>();
+            }
+        }
+        catch { jobStatuses = new(); }
+    }
+
+    // ---------- Информация о БД ----------
     private async Task LoadDatabaseInfo()
     {
         try
@@ -224,45 +300,64 @@
         }
     }
 
-    private List<MigrationHistoryDto>? migrationHistory;
-    private async Task LoadMigrationHistory()
+    // ---------- Тестовые данные ----------
+    private async Task LoadTestData()
     {
         try
         {
-            migrationHistory = await Http.GetFromJsonAsync<List<MigrationHistoryDto>>("api/admin/migration-history");
+            testData = await Http.GetFromJsonAsync<List<TestRecordDto>>("api/admin/test-records");
         }
-        catch { migrationHistory = new(); }
+        catch { testData = new(); }
     }
 
-    private async Task DebugBondByIsin()
+    // ---------- Настройки ----------
+    private async Task LoadSettings()
     {
-        debugBondResult = null;
+        try
+        {
+            var response = await Http.GetAsync("api/admin/settings?code=SendNotificationAboutNewUser");
+            if (response.IsSuccessStatusCode)
+            {
+                var value = await response.Content.ReadAsStringAsync();
+                notifyNewUser = bool.Parse(value);
+            }
+        }
+        catch { }
+    }
+
+    private async Task ToggleNotifyNewUser(ChangeEventArgs e)
+    {
+        notifyNewUser = (bool)(e.Value ?? false);
+        await Http.PutAsync($"api/admin/settings?code=SendNotificationAboutNewUser&enabled={notifyNewUser}", null);
+    }
+
+    // ---------- Уведомления ----------
+    private async Task SendTestEmail()
+    {
+        testEmailResult = null;
         StateHasChanged();
         try
         {
-            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
-            client.BaseAddress = new Uri(Navigation.BaseUri);
-            var token = await AuthService.GetToken();
-            if (!string.IsNullOrEmpty(token))
-                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-            var response = await client.PostAsJsonAsync("api/admin/debug-bond-by-isin", new { Isin = debugIsin });
+            var response = await Http.PostAsync("api/admin/test-email", null);
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadAsStringAsync();
-                debugBondResult = result;
+                testEmailResult = "Письмо отправлено!";
+                testEmailSuccess = true;
             }
             else
             {
-                debugBondResult = $"Ошибка: {await response.Content.ReadAsStringAsync()}";
+                testEmailResult = $"Ошибка: {await response.Content.ReadAsStringAsync()}";
+                testEmailSuccess = false;
             }
         }
         catch (Exception ex)
         {
-            debugBondResult = $"Ошибка: {ex.Message}";
+            testEmailResult = $"Ошибка: {ex.Message}";
+            testEmailSuccess = false;
         }
     }
 
+    // ---------- Очистка выплат ----------
     private async Task ClearPayments()
     {
         isClearing = true;
@@ -302,93 +397,55 @@
         }
     }
 
-    private class ClearResult
-    {
-        public int Deleted { get; set; }
-    }
+    private class ClearResult { public int Deleted { get; set; } }
 
-    protected override async Task OnInitializedAsync()
+    // ---------- Загрузка облигаций ----------
+    private async Task LoadBonds()
     {
-        // ... существующий код ...
-        await LoadTestData();
-        await LoadSettings();
-    }
-
-    private async Task LoadSettings()
-    {
-        try
-        {
-            var response = await Http.GetAsync("api/admin/settings?code=SendNotificationAboutNewUser");
-            if (response.IsSuccessStatusCode)
-            {
-                var value = await response.Content.ReadAsStringAsync();
-                notifyNewUser = bool.Parse(value);
-            }
-        }
-        catch { }
-    }
-
-    private async Task ToggleNotifyNewUser(ChangeEventArgs e)
-    {
-        notifyNewUser = (bool)(e.Value ?? false);
-        await Http.PutAsync($"api/admin/settings?code=SendNotificationAboutNewUser&enabled={notifyNewUser}", null);
-    }
-
-    private async Task SendTestEmail()
-    {
-        testEmailResult = null;
+        isBondsLoading = true;
+        bondsMessage = null;
+        bondsIsError = false;
         StateHasChanged();
-        try
-        {
-            var response = await Http.PostAsync("api/admin/test-email", null);
-            if (response.IsSuccessStatusCode)
-            {
-                testEmailResult = "Письмо отправлено!";
-                testEmailSuccess = true;
-            }
-            else
-            {
-                testEmailResult = $"Ошибка: {await response.Content.ReadAsStringAsync()}";
-                testEmailSuccess = false;
-            }
-        }
-        catch (Exception ex)
-        {
-            testEmailResult = $"Ошибка: {ex.Message}";
-            testEmailSuccess = false;
-        }
-    }
 
-    private async Task DebugBond()
-    {
-        debugResult = null;
-        StateHasChanged();
         try
         {
-            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
             client.BaseAddress = new Uri(Navigation.BaseUri);
             var token = await AuthService.GetToken();
             if (!string.IsNullOrEmpty(token))
                 client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-            var request = new { Ticker = debugTicker };
-            var response = await client.PostAsJsonAsync("api/admin/debug-bond", request);
+            var response = await client.PostAsync("api/admin/load-bonds", null);
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadAsStringAsync();
-                debugResult = result;
+                var result = await response.Content.ReadFromJsonAsync<LoadResult>();
+                bondsMessage = $"Добавлено облигаций: {result?.Added ?? 0}";
             }
             else
             {
-                debugResult = $"Ошибка: {await response.Content.ReadAsStringAsync()}";
+                var errorContent = await response.Content.ReadAsStringAsync();
+                bondsMessage = $"Ошибка: {errorContent}";
+                bondsIsError = true;
             }
+        }
+        catch (TaskCanceledException)
+        {
+            bondsMessage = "Загрузка прервана (таймаут). Попробуйте ещё раз.";
+            bondsIsError = true;
         }
         catch (Exception ex)
         {
-            debugResult = $"Ошибка: {ex.Message}";
+            bondsMessage = $"Ошибка: {ex.Message}";
+            bondsIsError = true;
+        }
+        finally
+        {
+            isBondsLoading = false;
+            StateHasChanged();
         }
     }
 
+    // ---------- Загрузка купонов/амортизаций ----------
     private async Task LoadBondPayments()
     {
         isBondPaymentsLoading = true;
@@ -398,14 +455,13 @@
 
         try
         {
-            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(20) }; // может быть долго
+            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(20) };
             client.BaseAddress = new Uri(Navigation.BaseUri);
             var token = await AuthService.GetToken();
             if (!string.IsNullOrEmpty(token))
                 client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
             var response = await client.PostAsync("api/admin/load-bond-payments", null);
-
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<BondPaymentsResult>();
@@ -441,6 +497,7 @@
         public int AmortizationsAdded { get; set; }
     }
 
+    // ---------- Загрузка дивидендов ----------
     private async Task LoadDividends()
     {
         isDividendsLoading = true;
@@ -458,7 +515,6 @@
 
             var request = new { Year = selectedYear, Month = selectedMonth };
             var response = await client.PostAsJsonAsync("api/admin/load-dividends", request);
-
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<LoadResult>();
@@ -488,52 +544,6 @@
         }
     }
 
-    private async Task LoadBonds()
-    {
-        isBondsLoading = true;
-        bondsMessage = null;
-        bondsIsError = false;
-        StateHasChanged();
-
-        try
-        {
-            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
-            client.BaseAddress = new Uri(Navigation.BaseUri);
-            var token = await AuthService.GetToken();
-            if (!string.IsNullOrEmpty(token))
-                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-
-            var response = await client.PostAsync("api/admin/load-bonds", null);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var result = await response.Content.ReadFromJsonAsync<LoadResult>();
-                bondsMessage = $"Добавлено облигаций: {result?.Added ?? 0}";
-            }
-            else
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                bondsMessage = $"Ошибка: {errorContent}";
-                bondsIsError = true;
-            }
-        }
-        catch (TaskCanceledException)
-        {
-            bondsMessage = "Загрузка прервана (таймаут). Попробуйте ещё раз.";
-            bondsIsError = true;
-        }
-        catch (Exception ex)
-        {
-            bondsMessage = $"Ошибка: {ex.Message}";
-            bondsIsError = true;
-        }
-        finally
-        {
-            isBondsLoading = false;
-            StateHasChanged();
-        }
-    }
-
     private class LoadResult
     {
         public int Added { get; set; }
@@ -541,13 +551,64 @@
         public int Year { get; set; }
     }
 
-    private List<TestRecordDto>? testData;
-    private async Task LoadTestData()
+    // ---------- Диагностика облигации ----------
+    private async Task DebugBond()
     {
+        debugResult = null;
+        StateHasChanged();
         try
         {
-            testData = await Http.GetFromJsonAsync<List<TestRecordDto>>("api/admin/test-records");
+            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+            client.BaseAddress = new Uri(Navigation.BaseUri);
+            var token = await AuthService.GetToken();
+            if (!string.IsNullOrEmpty(token))
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var request = new { Ticker = debugTicker };
+            var response = await client.PostAsJsonAsync("api/admin/debug-bond", request);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadAsStringAsync();
+                debugResult = result;
+            }
+            else
+            {
+                debugResult = $"Ошибка: {await response.Content.ReadAsStringAsync()}";
+            }
         }
-        catch { testData = new(); }
+        catch (Exception ex)
+        {
+            debugResult = $"Ошибка: {ex.Message}";
+        }
+    }
+
+    // ---------- Диагностика по ISIN ----------
+    private async Task DebugBondByIsin()
+    {
+        debugBondResult = null;
+        StateHasChanged();
+        try
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
+            client.BaseAddress = new Uri(Navigation.BaseUri);
+            var token = await AuthService.GetToken();
+            if (!string.IsNullOrEmpty(token))
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await client.PostAsJsonAsync("api/admin/debug-bond-by-isin", new { Isin = debugIsin });
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadAsStringAsync();
+                debugBondResult = result;
+            }
+            else
+            {
+                debugBondResult = $"Ошибка: {await response.Content.ReadAsStringAsync()}";
+            }
+        }
+        catch (Exception ex)
+        {
+            debugBondResult = $"Ошибка: {ex.Message}";
+        }
     }
 }

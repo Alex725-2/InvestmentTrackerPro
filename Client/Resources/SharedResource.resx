@@ -181,5 +181,11 @@
 
 <data name="DatabaseInfo" xml:space="preserve"><value>Информация о базе данных</value></data>
 <data name="CheckDatabase" xml:space="preserve"><value>Проверить БД</value></data>
+<data name="BackgroundJobs" xml:space="preserve"><value>Фоновые процессы</value></data>
+<data name="JobName" xml:space="preserve"><value>Задача</value></data>
+<data name="Running" xml:space="preserve"><value>Выполняется</value></data>
+<data name="Idle" xml:space="preserve"><value>Ожидание</value></data>
+<data name="LastStarted" xml:space="preserve"><value>Запущена</value></data>
+<data name="LastCompleted" xml:space="preserve"><value>Завершена</value></data>
   
 </root>
