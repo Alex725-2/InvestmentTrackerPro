@@ -18,6 +18,7 @@ namespace InvestmentTracker.Server.Data
         public DbSet<PaymentEvent> PaymentEvents { get; set; }
         public DbSet<AppSetting> AppSettings { get; set; }
         public DbSet<TestRecord> TestRecords { get; set; }
+        public DbSet<TestRecord2> TestRecord2s { get; set; }
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options) { }

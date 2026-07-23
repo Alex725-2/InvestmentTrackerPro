@@ -17,6 +17,16 @@ namespace InvestmentTracker.Server.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IServiceProvider _serviceProvider;
 
+        [HttpGet("test-records2")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<List<TestRecord2Dto>>> GetTestRecords2()
+        {
+            var records = await _context.TestRecord2s
+                .Select(r => new TestRecord2Dto { Id = r.Id, Description = r.Description })
+                .ToListAsync();
+            return Ok(records);
+        }
+
         public AdminController(
             ApplicationDbContext context,
             UserManager<ApplicationUser> userManager,

@@ -95,6 +95,11 @@ namespace InvestmentTracker.Server.Data
                 context.TestRecords.Add(new TestRecord { Name = "Test OK" });
                 await context.SaveChangesAsync();
             }
+            if (!context.TestRecord2s.Any())
+            {
+                context.TestRecord2s.Add(new TestRecord2 { Description = "Test OK 2" });
+                await context.SaveChangesAsync();
+            }
         }
     }
 }

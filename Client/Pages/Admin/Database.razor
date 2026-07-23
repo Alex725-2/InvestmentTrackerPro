@@ -1,0 +1,127 @@
+﻿@page "/admin/database"
+@using InvestmentTracker.Shared.Models
+@using Microsoft.Extensions.Localization
+@using InvestmentTracker.Client.Resources
+@inject HttpClient Http
+@inject IStringLocalizer<SharedResource> Localizer
+
+<h3>@Localizer["Database"]</h3>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5>@Localizer["MigrationHistory"]</h5>
+                <button class="btn btn-secondary mb-2" @onclick="LoadMigrationHistory">@Localizer["Refresh"]</button>
+                @if (migrationHistory != null && migrationHistory.Count > 0)
+                {
+                    <table class="table table-sm">
+                        <thead><tr><th>MigrationId</th><th>ProductVersion</th></tr></thead>
+                        <tbody>
+                            @foreach (var m in migrationHistory)
+                            {
+                                <tr><td>@m.MigrationId</td><td>@m.ProductVersion</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p>@Localizer["NoMigrations"]</p>
+                }
+                <button class="btn btn-warning mt-2" @onclick="FixMigrations">@Localizer["FixMigrations"]</button>
+                @if (!string.IsNullOrEmpty(fixMessage))
+                {
+                    <div class="alert alert-info mt-2">@fixMessage</div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5>@Localizer["TestTables"]</h5>
+                <button class="btn btn-secondary mb-2" @onclick="LoadTestRecords">@Localizer["Refresh"]</button>
+                @if (testRecords1 != null)
+                {
+                    <h6>TestRecords 1</h6>
+                    <ul>
+                        @foreach (var t in testRecords1)
+                        {
+                            <li>@t.Id - @t.Name</li>
+                        }
+                    </ul>
+                }
+                @if (testRecords2 != null)
+                {
+                    <h6>TestRecords 2</h6>
+                    <ul>
+                        @foreach (var t in testRecords2)
+                        {
+                            <li>@t.Id - @t.Description</li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<MigrationHistoryDto>? migrationHistory;
+    private string? fixMessage;
+
+    private List<TestRecordDto>? testRecords1;
+    private List<TestRecord2Dto>? testRecords2;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMigrationHistory();
+        await LoadTestRecords();
+    }
+
+    private async Task LoadMigrationHistory()
+    {
+        try
+        {
+            migrationHistory = await Http.GetFromJsonAsync<List<MigrationHistoryDto>>("api/admin/migration-history");
+        }
+        catch { migrationHistory = new(); }
+    }
+
+    private async Task FixMigrations()
+    {
+        try
+        {
+            var response = await Http.PostAsync("api/admin/fix-migrations", null);
+            if (response.IsSuccessStatusCode)
+            {
+                fixMessage = "Миграции исправлены.";
+                await LoadMigrationHistory();
+            }
+            else
+            {
+                fixMessage = $"Ошибка: {response.StatusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            fixMessage = $"Ошибка: {ex.Message}";
+        }
+    }
+
+    private async Task LoadTestRecords()
+    {
+        try
+        {
+            testRecords1 = await Http.GetFromJsonAsync<List<TestRecordDto>>("api/admin/test-records");
+        }
+        catch { testRecords1 = new(); }
+
+        try
+        {
+            testRecords2 = await Http.GetFromJsonAsync<List<TestRecord2Dto>>("api/admin/test-records2");
+        }
+        catch { testRecords2 = new(); }
+    }
+}
