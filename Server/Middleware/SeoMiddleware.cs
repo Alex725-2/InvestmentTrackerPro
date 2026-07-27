@@ -80,7 +80,8 @@ namespace InvestmentTracker.Server.Middleware
                     if (bond != null)
                     {
                         var bondEvents = await db.PaymentEvents
-                            .Where(p => p.SecurityId == bond.Id && p.Date >= DateTime.Today)
+                            // .Where(p => p.SecurityId == bond.Id && p.Date >= DateTime.Today)
+                            .Where(p => p.SecurityId == bond.Id) //Чтобы не падало на пустых бумагах
                             .OrderBy(p => p.Date)
                             .ToListAsync();
 

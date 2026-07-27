@@ -19,6 +19,27 @@ namespace InvestmentTracker.Server.Controllers
             _context = context;
         }
 
+        [HttpGet("byTicker/{ticker}")]
+        [AllowAnonymous]
+        public async Task<ActionResult<SecurityDto>> GetByTicker(string ticker)
+        {
+            var security = await _context.Securities
+                .Include(s => s.AssetType)
+                .FirstOrDefaultAsync(s => s.Ticker == ticker.ToUpper());
+
+            if (security == null) return NotFound();
+
+            return Ok(new SecurityDto
+            {
+                Id = security.Id,
+                Ticker = security.Ticker,
+                Isin = security.Isin,
+                Name = security.Name,
+                AssetTypeId = security.AssetTypeId,
+                AssetTypeName = security.AssetType?.Name
+            });
+        }
+
         [HttpGet]
         [AllowAnonymous]   // гости и все могут видеть список бумаг
         public async Task<ActionResult<List<SecurityDto>>> GetAll()

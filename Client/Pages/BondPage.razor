@@ -92,7 +92,7 @@ else if (bond != null)
     private SecurityDto? bond;
     private List<PaymentEventDto>? events;
     private string? error;
-    private bool hidePast = true;
+    private bool hidePast = false;
 
     private List<PaymentEventDto> filteredEvents =>
         events?
@@ -110,7 +110,8 @@ else if (bond != null)
     {
         try
         {
-            var info = await Http.GetFromJsonAsync<SecurityDto>($"api/securities/lookup?ticker={Ticker}");
+           // var info = await Http.GetFromJsonAsync<SecurityDto>($"api/securities/lookup?ticker={Ticker}");
+            var info = await Http.GetFromJsonAsync<SecurityDto>($"api/securities/byTicker/{Ticker}");
             bond = info;
             if (bond == null) error = "Облигация не найдена";
         }
@@ -121,6 +122,8 @@ else if (bond != null)
     {
         try
         {
+           // var url = $"api/payments/upcoming?ticker={Ticker}&includePast=true&count=500";
+            //var url = $"https://localhost:7175/api/payments/upcoming?ticker={Ticker}&includePast=true&count=500";
             var url = $"api/payments/upcoming?ticker={Ticker}&includePast=true&count=500";
             events = await Http.GetFromJsonAsync<List<PaymentEventDto>>(url) ?? new();
         }
