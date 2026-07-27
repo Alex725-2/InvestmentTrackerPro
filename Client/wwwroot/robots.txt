@@ -1,0 +1,10 @@
+﻿User-agent: *
+Allow: /
+Disallow: /swagger
+Disallow: /hangfire
+Disallow: /admin
+Disallow: /profile
+Disallow: /login
+Disallow: /register
+
+Sitemap: https://investment-tracker.ru/sitemap.xml
