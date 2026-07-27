@@ -9,9 +9,52 @@
 @attribute [Authorize(Roles = "Admin")]
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <h3>@Localizer["AdminPanel"]</h3>
-
+@* ==================== БЭКАПЫ ==================== *@
+<div class="card mb-4">
+    <div class="card-body">
+        <h5>@Localizer["Backups"]</h5>
+        <button class="btn btn-primary mb-3" @onclick="CreateBackup" disabled="@isBackupCreating">@Localizer["CreateBackup"]</button>
+        <button class="btn btn-secondary mb-3 ms-2" @onclick="RefreshBackups">@Localizer["Refresh"]</button>
+        @if (backups != null && backups.Count > 0)
+        {
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>@Localizer["FileName"]</th>
+                        <th>@Localizer["CreatedAt"]</th>
+                        <th>@Localizer["Size"]</th>
+                        <th>@Localizer["Actions"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var b in backups)
+                    {
+                        <tr>
+                            <td>@b.FileName</td>
+                            <td>@b.CreatedAt.ToString("g")</td>
+                            <td>@(b.SizeBytes / 1024) KB</td>
+                            <td>
+                                <button class="btn btn-sm btn-secondary" @onclick="() => DownloadBackup(b.Id)">@Localizer["Download"]</button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteBackup(b.Id)">@Localizer["Delete"]</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>@Localizer["NoBackups"]</p>
+        }
+        @if (!string.IsNullOrEmpty(backupMessage))
+        {
+            <div class="alert @(backupIsError ? "alert-danger" : "alert-success") mt-2">@backupMessage</div>
+        }
+    </div>
+</div>
 @* ==================== ИНФОРМАЦИЯ О БД ==================== *@
 <div class="card mb-4">
     <div class="card-body">
@@ -257,6 +300,99 @@
     private string? dbInfoJson;
     private Dictionary<string, BackgroundJobStatusDto>? jobStatuses;
     private List<TestRecordDto>? testData;
+
+    private List<DbBackupDto>? backups;
+    private bool isBackupCreating;
+    private string? backupMessage;
+    private bool backupIsError;
+
+    private async Task RefreshBackups()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/admin/backups");
+            if (response.IsSuccessStatusCode)
+                backups = await response.Content.ReadFromJsonAsync<List<DbBackupDto>>();
+        }
+        catch { backups = new(); }
+    }
+
+    private async Task CreateBackup()
+    {
+        isBackupCreating = true;
+        backupMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var response = await Http.PostAsync("api/admin/backups/create", null);
+            if (response.IsSuccessStatusCode)
+            {
+                backupMessage = "Бэкап создан";
+                backupIsError = false;
+                await RefreshBackups();
+            }
+            else
+            {
+                backupMessage = $"Ошибка: {response.StatusCode}";
+                backupIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            backupMessage = $"Ошибка: {ex.Message}";
+            backupIsError = true;
+        }
+        finally
+        {
+            isBackupCreating = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DownloadBackup(int id)
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/admin/backups/download/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                var bytes = await response.Content.ReadAsByteArrayAsync();
+                var fileName = response.Content.Headers.ContentDisposition?.FileNameStar ?? "backup.db";
+                // Вызываем JS для скачивания (функция уже есть в index.html)
+                await JS.InvokeVoidAsync("downloadFile", bytes, fileName);
+            }
+        }
+        catch (Exception ex)
+        {
+            backupMessage = $"Ошибка скачивания: {ex.Message}";
+            backupIsError = true;
+        }
+    }
+
+    private async Task DeleteBackup(int id)
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"api/admin/backups/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                backupMessage = "Бэкап удалён";
+                backupIsError = false;
+                await RefreshBackups();
+            }
+            else
+            {
+                backupMessage = $"Ошибка удаления: {response.StatusCode}";
+                backupIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            backupMessage = $"Ошибка: {ex.Message}";
+            backupIsError = true;
+        }
+    }
 
     // ---------- Инициализация ----------
     protected override async Task OnInitializedAsync()

@@ -107,12 +107,14 @@ if (builder.Environment.IsDevelopment())
 // ===================== 6. РЕГИСТРАЦИЯ СЕРВИСОВ =====================
 builder.Services.AddHttpClient<MoexService>();
 builder.Services.AddScoped<QuoteUpdateService>();
+builder.Services.AddSingleton<BackupService>();
 
 // Фоновые сервисы (только на проде)
 if (!builder.Environment.IsDevelopment())
 {
     builder.Services.AddHostedService<QuoteBackgroundService>();
     builder.Services.AddHostedService<BondMaintenanceService>();   // <-- добавлено
+    builder.Services.AddHostedService<BackupBackgroundService>();
 }
 
 builder.Services.AddSingleton<SettingsService>();

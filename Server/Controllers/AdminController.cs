@@ -17,6 +17,45 @@ namespace InvestmentTracker.Server.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IServiceProvider _serviceProvider;
 
+        // ==================== БЭКАПЫ ====================
+        [HttpGet("backups")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<List<DbBackupDto>>> GetBackups()
+        {
+            var backupService = _serviceProvider.GetRequiredService<BackupService>();
+            return Ok(await backupService.GetBackupsAsync());
+        }
+
+        [HttpPost("backups/create")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> CreateBackup()
+        {
+            var backupService = _serviceProvider.GetRequiredService<BackupService>();
+            var result = await backupService.CreateBackupAsync();
+            if (result == null) return BadRequest("Failed to create backup");
+            return Ok(result);
+        }
+
+        [HttpGet("backups/download/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DownloadBackup(int id)
+        {
+            var backupService = _serviceProvider.GetRequiredService<BackupService>();
+            var (bytes, fileName) = await backupService.GetBackupFileAsync(id);
+            if (bytes == null) return NotFound();
+            return File(bytes, "application/octet-stream", fileName);
+        }
+
+        [HttpDelete("backups/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteBackup(int id)
+        {
+            var backupService = _serviceProvider.GetRequiredService<BackupService>();
+            var success = await backupService.DeleteBackupAsync(id);
+            if (!success) return NotFound();
+            return NoContent();
+        }
+
         [HttpGet("test-records2")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<List<TestRecord2Dto>>> GetTestRecords2()
