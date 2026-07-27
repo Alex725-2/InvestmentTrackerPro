@@ -64,7 +64,6 @@
                     {
                         <div class="alert alert-success mt-2">Токен скопирован в буфер обмена</div>
                     }
-                 
                 </div>
             </div>
         }
@@ -74,6 +73,42 @@
             <div class="alert alert-danger">@globalError</div>
         }
 
+        <!-- Плашка поиска облигаций -->
+        <div class="row mb-4">
+            <div class="col-md-6 offset-md-3">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">@Localizer["SearchBond"]</h5>
+                        <div class="input-group">
+                            <input @bind="searchIsin" class="form-control" placeholder="@Localizer["EnterIsinOrTicker"]" />
+                            <button class="btn btn-primary" @onclick="SearchBond">@Localizer["Search"]</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Быстрые ссылки на публичные страницы -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3">
+                <a href="/bonds" class="text-decoration-none">
+                    <div class="card shadow-sm text-center p-3">
+                        <h5>📋 @Localizer["AllBonds"]</h5>
+                        <p class="text-muted mb-0">@Localizer["BrowseAllBonds"]</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-6 mb-3">
+                <a href="/ofz" class="text-decoration-none">
+                    <div class="card shadow-sm text-center p-3">
+                        <h5>🇷🇺 @Localizer["AllOfz"]</h5>
+                        <p class="text-muted mb-0">@Localizer["BrowseOfz"]</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Дашборд -->
         <div class="row">
             <!-- Топ-5 позиций -->
             <div class="col-md-6 col-lg-4 mb-4">
@@ -236,6 +271,42 @@
             <a class="btn btn-outline-secondary ms-2" href="/register">@Localizer["Register"]</a>
         </div>
 
+        <!-- Плашка поиска облигаций для гостей -->
+        <div class="row mb-4">
+            <div class="col-md-6 offset-md-3">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">@Localizer["SearchBond"]</h5>
+                        <div class="input-group">
+                            <input @bind="searchIsin" class="form-control" placeholder="@Localizer["EnterIsinOrTicker"]" />
+                            <button class="btn btn-primary" @onclick="SearchBond">@Localizer["Search"]</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Быстрые ссылки на публичные страницы -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3">
+                <a href="/bonds" class="text-decoration-none">
+                    <div class="card shadow-sm text-center p-3">
+                        <h5>📋 @Localizer["AllBonds"]</h5>
+                        <p class="text-muted mb-0">@Localizer["BrowseAllBonds"]</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-6 mb-3">
+                <a href="/ofz" class="text-decoration-none">
+                    <div class="card shadow-sm text-center p-3">
+                        <h5>🇷🇺 @Localizer["AllOfz"]</h5>
+                        <p class="text-muted mb-0">@Localizer["BrowseOfz"]</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Рыночные данные -->
         <div class="row">
             <div class="col-md-3 mb-4">
                 <div class="card shadow-sm">
@@ -304,6 +375,13 @@
     private string? globalError, topError, summaryError, historyError;
     private bool copied;
     private string? tokenDisplay;
+    private string searchIsin = string.Empty;
+
+    private void SearchBond()
+    {
+        if (!string.IsNullOrWhiteSpace(searchIsin))
+            Navigation.NavigateTo($"/bond/{searchIsin.Trim().ToUpper()}");
+    }
 
     private async Task CopyToken()
     {
@@ -370,16 +448,10 @@
     {
         topPositions = null; summary = null; history = null; market = null;
         globalError = topError = summaryError = historyError = null;
-        // tokenDisplay больше не используется
     }
 
-  
     private string? refreshResult;
-
-   
-
     private bool isRefreshing;
-   // private string? refreshResult;
     private string? refreshError;
 
     private async Task RefreshSecurities()
@@ -391,12 +463,8 @@
 
         try
         {
-            // Создаём отдельный HttpClient с большим таймаутом
             using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };
-            // Копируем базовый адрес из основного HttpClient (если настроен)
             client.BaseAddress = new Uri(Navigation.BaseUri);
-
-            // Копируем токен авторизации, если есть
             var token = await AuthService.GetToken();
             if (!string.IsNullOrEmpty(token))
             {
@@ -405,7 +473,6 @@
             }
 
             var response = await client.PostAsync("api/securities/refresh-types", null);
-
             if (response.IsSuccessStatusCode)
             {
                 var result = await response.Content.ReadFromJsonAsync<RefreshResult>();
@@ -421,7 +488,7 @@
                 refreshError = $"Ошибка при обновлении типов: {errorMsg}";
             }
         }
-        catch (TaskCanceledException) // таймаут или отмена
+        catch (TaskCanceledException)
         {
             refreshError = "Обновление типов заняло слишком много времени и было прервано. Попробуйте позже.";
         }

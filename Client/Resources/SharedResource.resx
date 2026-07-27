@@ -187,5 +187,25 @@
 <data name="Idle" xml:space="preserve"><value>Ожидание</value></data>
 <data name="LastStarted" xml:space="preserve"><value>Запущена</value></data>
 <data name="LastCompleted" xml:space="preserve"><value>Завершена</value></data>
+
+<data name="Backups" xml:space="preserve"><value>Резервные копии</value></data>
+<data name="CreateBackup" xml:space="preserve"><value>Создать бэкап</value></data>
+<data name="FileName" xml:space="preserve"><value>Имя файла</value></data>
+<data name="CreatedAt" xml:space="preserve"><value>Дата создания</value></data>
+<data name="Size" xml:space="preserve"><value>Размер</value></data>
+<data name="Download" xml:space="preserve"><value>Скачать</value></data>
+<data name="NoBackups" xml:space="preserve"><value>Нет бэкапов</value></data>
+<data name="AllBonds" xml:space="preserve"><value>Все облигации</value></data>
+<data name="AllBondsDesc" xml:space="preserve"><value>Полный список облигаций на Московской бирже</value></data>
+<data name="AllOfz" xml:space="preserve"><value>ОФЗ</value></data>
+<data name="AllOfzDesc" xml:space="preserve"><value>Облигации федерального займа</value></data>
+<data name="ViewAll" xml:space="preserve"><value>Смотреть все</value></data>
+<data name="SearchBond" xml:space="preserve"><value>Поиск облигации</value></data>
+<data name="EnterIsinOrTicker" xml:space="preserve"><value>Введите ISIN или тикер</value></data>
+
+
+  <data name="BrowseAllBonds" xml:space="preserve"><value>Просмотреть все облигации</value></data>
+  <data name="BrowseOfz" xml:space="preserve"><value>Просмотреть ОФЗ</value></data>
+ 
   
 </root>

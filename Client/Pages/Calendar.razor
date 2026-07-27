@@ -128,7 +128,11 @@ else if (allPayments?.Count == 0)
 else if (viewMode == "calendar")
 {
     <div class="d-flex justify-content-between align-items-center mb-2">
-        <button class="btn btn-sm btn-outline-secondary" @onclick="PreviousMonth">←</button>
+        <button class="btn btn-sm btn-outline-secondary"
+                @onclick="PreviousMonth"
+                disabled="@(minDate.HasValue && currentMonth.Year == minDate.Value.Year && currentMonth.Month == minDate.Value.Month)">
+            ←
+        </button>
         <h5 class="mb-0">@currentMonth.ToString("MMMM yyyy")</h5>
         <button class="btn btn-sm btn-outline-secondary" @onclick="NextMonth">→</button>
     </div>
@@ -275,6 +279,7 @@ else
 
     private DateTime? selectedDate;
     private List<PaymentEventDto>? selectedDayEvents;
+    private DateTime? minDate;
 
     private void SetPaymentTypeFilter(string type)
     {
@@ -300,9 +305,25 @@ else
         isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
         myOnly = false;  // по умолчанию показываем все бумаги
         currentMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        
         await LoadAllPayments();
         await LoadMonthPayments();
+        await LoadMinDate();
         BuildCalendar();
+    }
+    private async Task LoadMinDate()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/payments/min-date");
+            if (response.IsSuccessStatusCode)
+            {
+                var dateStr = await response.Content.ReadAsStringAsync();
+                if (DateTime.TryParse(dateStr, out var date))
+                    minDate = date;
+            }
+        }
+        catch { minDate = null; }
     }
 
     private async Task LoadAllPayments()
@@ -348,7 +369,11 @@ else
 
     private async Task PreviousMonth()
     {
-        currentMonth = currentMonth.AddMonths(-1);
+        var newMonth = currentMonth.AddMonths(-1);
+        if (minDate.HasValue && newMonth < new DateTime(minDate.Value.Year, minDate.Value.Month, 1))
+            return;
+
+        currentMonth = newMonth;
         await LoadMonthPayments();
         BuildCalendar();
     }

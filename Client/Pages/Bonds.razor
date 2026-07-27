@@ -1,0 +1,52 @@
+﻿@page "/bonds"
+@using InvestmentTracker.Shared.Models
+@using InvestmentTracker.Client.Resources
+@using Microsoft.Extensions.Localization
+@inject HttpClient Http
+@inject IStringLocalizer<SharedResource> Localizer
+
+<h3>@Localizer["AllBonds"]</h3>
+
+@if (bonds == null)
+{
+    <p>@Localizer["Loading"]</p>
+}
+else if (!bonds.Any())
+{
+    <p>@Localizer["NoData"]</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>@Localizer["Ticker"]</th>
+                <th>@Localizer["ISIN"]</th>
+                <th>@Localizer["SecurityName"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var bond in bonds)
+            {
+                <tr>
+                    <td><a href="/bond/@bond.Ticker">@bond.Ticker</a></td>
+                    <td>@bond.Isin</td>
+                    <td>@bond.Name</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<SecurityDto>? bonds;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            bonds = await Http.GetFromJsonAsync<List<SecurityDto>>("api/securities/bonds");
+        }
+        catch { bonds = new(); }
+    }
+}

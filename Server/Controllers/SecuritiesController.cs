@@ -13,10 +13,54 @@ namespace InvestmentTracker.Server.Controllers
     public class SecuritiesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-
+       
         public SecuritiesController(ApplicationDbContext context)
         {
             _context = context;
+        }
+
+        // GET api/securities/bonds – возвращает все облигации
+        [HttpGet("bonds")]
+        [AllowAnonymous]
+        public async Task<ActionResult<List<SecurityDto>>> GetBonds()
+        {
+            var bonds = await _context.Securities
+                .Where(s => s.AssetType.Name == "Облигация")
+                .OrderBy(s => s.Ticker)
+                .Select(s => new SecurityDto
+                {
+                    Id = s.Id,
+                    Ticker = s.Ticker,
+                    Isin = s.Isin,
+                    Name = s.Name,
+                    AssetTypeId = s.AssetTypeId,
+                    AssetTypeName = s.AssetType.Name
+                })
+                .ToListAsync();
+
+            return Ok(bonds);
+        }
+
+        // GET api/securities/ofz – возвращает только ОФЗ
+        [HttpGet("ofz")]
+        [AllowAnonymous]
+        public async Task<ActionResult<List<SecurityDto>>> GetOfz()
+        {
+            var ofz = await _context.Securities
+                .Where(s => s.AssetType.Name == "Облигация" && s.Name.StartsWith("ОФЗ"))
+                .OrderBy(s => s.Ticker)
+                .Select(s => new SecurityDto
+                {
+                    Id = s.Id,
+                    Ticker = s.Ticker,
+                    Isin = s.Isin,
+                    Name = s.Name,
+                    AssetTypeId = s.AssetTypeId,
+                    AssetTypeName = s.AssetType.Name
+                })
+                .ToListAsync();
+
+            return Ok(ofz);
         }
 
         [HttpGet("byTicker/{ticker}")]

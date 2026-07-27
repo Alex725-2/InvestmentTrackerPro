@@ -1,0 +1,52 @@
+﻿@page "/ofz"
+@using InvestmentTracker.Shared.Models
+@using InvestmentTracker.Client.Resources
+@using Microsoft.Extensions.Localization
+@inject HttpClient Http
+@inject IStringLocalizer<SharedResource> Localizer
+
+<h3>@Localizer["AllOfz"]</h3>
+
+@if (ofzClass == null)
+{
+    <p>@Localizer["Loading"]</p>
+}
+else if (!ofzClass.Any())
+{
+    <p>@Localizer["NoData"]</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>@Localizer["Ticker"]</th>
+                <th>@Localizer["ISIN"]</th>
+                <th>@Localizer["SecurityName"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var bond in ofzClass)
+            {
+                <tr>
+                    <td><a href="/bond/@bond.Ticker">@bond.Ticker</a></td>
+                    <td>@bond.Isin</td>
+                    <td>@bond.Name</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<SecurityDto>? ofzClass;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            ofzClass = await Http.GetFromJsonAsync<List<SecurityDto>>("api/securities/ofz");
+        }
+        catch { ofzClass = new(); }
+    }
+}

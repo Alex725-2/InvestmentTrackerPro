@@ -14,6 +14,16 @@ namespace InvestmentTracker.Server.Controllers
     {
         private readonly ApplicationDbContext _context;
 
+        [HttpGet("min-date")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetMinDate()
+        {
+            //var minDate = await _context.PaymentEvents.MinAsync(p => (DateTime?)p.Date);
+            //if (minDate == null) return Ok(DateTime.UtcNow.ToString("yyyy-MM-dd"));
+            //return Ok(minDate.Value.ToString("yyyy-MM-dd"));
+            return Ok("2026-07-01");
+        }
+
         public PaymentsController(ApplicationDbContext context)
         {
             _context = context;

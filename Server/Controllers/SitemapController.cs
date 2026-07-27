@@ -20,14 +20,15 @@ namespace InvestmentTracker.Server.Controllers
         [HttpGet]
         public IActionResult GetSitemap()
         {
-            var baseUrl = $"https://{Request.Host.Value}";  // <-- было http, стало https
+            var baseUrl = $"https://{Request.Host.Value}";
             var urls = new List<string>
     {
         $"{baseUrl}/",
-        $"{baseUrl}/calendar"
+        $"{baseUrl}/calendar",
+        $"{baseUrl}/bonds",
+        $"{baseUrl}/ofz"
     };
 
-            // Добавляем страницы облигаций
             var context = HttpContext.RequestServices.GetRequiredService<ApplicationDbContext>();
             var bonds = context.Securities
                 .Where(s => s.AssetType.Name == "Облигация")

@@ -109,6 +109,65 @@ namespace InvestmentTracker.Server.Middleware
                 }
             }
 
+            // Обработка /bonds для ботов
+            if (isBot && path != null && path.StartsWith("/bonds"))
+            {
+                using var scope = context.RequestServices.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var bonds = await db.Securities
+                    .Where(s => s.AssetType.Name == "Облигация")
+                    .OrderBy(s => s.Ticker)
+                    .ToListAsync();
+
+                var html = new StringBuilder();
+                html.AppendLine("<!DOCTYPE html><html lang='ru'><head><meta charset='UTF-8'>");
+                html.AppendLine("<meta name='description' content='Список всех облигаций на Московской бирже. Поиск облигаций по ISIN и тикеру.'>");
+                html.AppendLine("<meta name='keywords' content='облигации, список облигаций, поиск облигаций, ISIN, тикер'>");
+                html.AppendLine("<title>Все облигации</title>");
+                html.AppendLine("<link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body class='container mt-4'>");
+                html.AppendLine("<h1>Все облигации</h1>");
+                html.AppendLine("<table class='table table-striped'><thead><tr><th>Тикер</th><th>ISIN</th><th>Название</th></tr></thead><tbody>");
+                foreach (var b in bonds)
+                {
+                    html.AppendLine($"<tr><td><a href='/bond/{b.Ticker}'>{b.Ticker}</a></td><td>{b.Isin}</td><td>{b.Name}</td></tr>");
+                }
+                html.AppendLine("</tbody></table>");
+                html.AppendLine("</body></html>");
+
+                context.Response.ContentType = "text/html; charset=utf-8";
+                await context.Response.WriteAsync(html.ToString());
+                return;
+            }
+
+            // Обработка /ofz для ботов (только ОФЗ)
+            if (isBot && path != null && path.StartsWith("/ofz"))
+            {
+                using var scope = context.RequestServices.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var ofz = await db.Securities
+                    .Where(s => s.AssetType.Name == "Облигация" && s.Name.StartsWith("ОФЗ"))
+                    .OrderBy(s => s.Ticker)
+                    .ToListAsync();
+
+                var html = new StringBuilder();
+                html.AppendLine("<!DOCTYPE html><html lang='ru'><head><meta charset='UTF-8'>");
+                html.AppendLine("<meta name='description' content='Список ОФЗ (облигаций федерального займа). Поиск ОФЗ по ISIN и тикеру.'>");
+                html.AppendLine("<meta name='keywords' content='ОФЗ, облигации федерального займа, государственные облигации, список ОФЗ'>");
+                html.AppendLine("<title>ОФЗ</title>");
+                html.AppendLine("<link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css' rel='stylesheet'></head><body class='container mt-4'>");
+                html.AppendLine("<h1>ОФЗ</h1>");
+                html.AppendLine("<table class='table table-striped'><thead><tr><th>Тикер</th><th>ISIN</th><th>Название</th></tr></thead><tbody>");
+                foreach (var o in ofz)
+                {
+                    html.AppendLine($"<tr><td><a href='/bond/{o.Ticker}'>{o.Ticker}</a></td><td>{o.Isin}</td><td>{o.Name}</td></tr>");
+                }
+                html.AppendLine("</tbody></table>");
+                html.AppendLine("</body></html>");
+
+                context.Response.ContentType = "text/html; charset=utf-8";
+                await context.Response.WriteAsync(html.ToString());
+                return;
+            }
             await _next(context);
         }
 
