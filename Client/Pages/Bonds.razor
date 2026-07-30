@@ -23,6 +23,9 @@ else
                 <th>@Localizer["Ticker"]</th>
                 <th>@Localizer["ISIN"]</th>
                 <th>@Localizer["SecurityName"]</th>
+                <th>@Localizer["NextCouponDate"]</th>
+                <th>@Localizer["FaceValue"]</th>
+                <th>@Localizer["IssueSize"]</th>
             </tr>
         </thead>
         <tbody>
@@ -32,6 +35,9 @@ else
                     <td><a href="/bond/@bond.Ticker">@bond.Ticker</a></td>
                     <td>@bond.Isin</td>
                     <td>@bond.Name</td>
+                    <td>@(bond.NextCouponDate?.ToString("dd.MM.yyyy") ?? "—")</td>
+                    <td>@(bond.FaceValue?.ToString("F2") ?? "—")</td>
+                    <td>@(bond.IssueSize?.ToString("N0") ?? "—")</td>
                 </tr>
             }
         </tbody>

@@ -206,6 +206,8 @@
 
   <data name="BrowseAllBonds" xml:space="preserve"><value>Просмотреть все облигации</value></data>
   <data name="BrowseOfz" xml:space="preserve"><value>Просмотреть ОФЗ</value></data>
- 
+ <data name="NextCouponDate" xml:space="preserve"><value>Дата купона</value></data>
+<data name="FaceValue" xml:space="preserve"><value>Номинал</value></data>
+<data name="IssueSize" xml:space="preserve"><value>Бумаг в выпуске</value></data>
   
 </root>
