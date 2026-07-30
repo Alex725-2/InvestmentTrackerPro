@@ -22,15 +22,14 @@ namespace InvestmentTracker.Server.Services
         {
             _statusService.SetRunning("load-bonds");
             var boards = board.Split(',', StringSplitOptions.RemoveEmptyEntries);
-
-            using var scope = _scopeFactory.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var httpClient = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>().CreateClient("Moex");
             int added = 0;
+
             try
             {
-
-               
+                using var scope = _scopeFactory.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var httpClient = scope.ServiceProvider.GetRequiredService<IHttpClientFactory>().CreateClient("Moex");
+                var moexService = scope.ServiceProvider.GetRequiredService<MoexService>();
 
                 foreach (var b in boards)
                 {
@@ -65,17 +64,25 @@ namespace InvestmentTracker.Server.Services
                             if (string.IsNullOrWhiteSpace(ticker) || string.IsNullOrWhiteSpace(name))
                                 continue;
 
-                            // Проверяем, нет ли уже такой бумаги
                             var exists = await context.Securities.AnyAsync(s => s.Ticker == ticker);
                             if (!exists)
                             {
-                                context.Securities.Add(new Security
+                                var security = new Security
                                 {
                                     Ticker = ticker!,
                                     Name = name!,
                                     Isin = isin,
                                     AssetTypeId = 2   // Облигация
-                                });
+                                };
+
+                                // Сразу пытаемся заполнить детали (купон, номинал, объём)
+                                try
+                                {
+                                    await FillBondDetailsInline(moexService, security);
+                                }
+                                catch { /* не критично, бумага добавится и без деталей */ }
+
+                                context.Securities.Add(security);
                                 added++;
                             }
                         }
@@ -85,17 +92,59 @@ namespace InvestmentTracker.Server.Services
                         _logger.LogError(ex, "Ошибка загрузки облигаций с доски {Board}", b);
                     }
                 }
+
+                if (added > 0)
+                    await context.SaveChangesAsync();
             }
             finally
             {
                 _statusService.SetCompleted("load-bonds");
             }
 
-            if (added > 0)
-                await context.SaveChangesAsync();
-
             return added;
+        }
 
+        // Вспомогательный метод, чтобы не дублировать логику парсинга
+        private static async Task FillBondDetailsInline(MoexService moexService, Security bond)
+        {
+            try
+            {
+                var url = $"https://iss.moex.com/iss/securities/{bond.Ticker.ToUpper()}.json";
+                using var httpClient = new HttpClient();
+                using var stream = await httpClient.GetStreamAsync(url);
+                using var doc = await JsonDocument.ParseAsync(stream);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("description", out var desc) && desc.TryGetProperty("data", out var data))
+                {
+                    foreach (var row in data.EnumerateArray())
+                    {
+                        var name = row[0].GetString();
+                        var value = row[2].GetString();
+                        switch (name)
+                        {
+                            case "COUPONDATE":
+                                if (DateTime.TryParse(value, System.Globalization.CultureInfo.InvariantCulture,
+                                        System.Globalization.DateTimeStyles.None, out var cd))
+                                    bond.NextCouponDate = cd;
+                                break;
+                            case "ISSUESIZE":
+                                if (long.TryParse(value, out var issueSize))
+                                    bond.IssueSize = issueSize;
+                                break;
+                            case "FACEVALUE":
+                                if (decimal.TryParse(value, System.Globalization.NumberStyles.Any,
+                                        System.Globalization.CultureInfo.InvariantCulture, out var fv))
+                                    bond.FaceValue = fv;
+                                break;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // молча пропускаем
+            }
         }
 
         private int FindColumnIndex(JsonElement columns, string name)

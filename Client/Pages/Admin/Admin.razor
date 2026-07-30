@@ -55,6 +55,20 @@
         }
     </div>
 </div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5>Обновление деталей облигаций</h5>
+        <p class="text-muted">Дозаполняет дату ближайшего купона, номинал и объём выпуска для существующих облигаций.</p>
+        <button class="btn btn-primary" @onclick="RefreshBondDetails" disabled="@isRefreshingDetails">
+            @(isRefreshingDetails ? "Обновление..." : "Обновить детали облигаций")
+        </button>
+        @if (!string.IsNullOrEmpty(refreshDetailsMessage))
+        {
+            <div class="alert @(refreshDetailsIsError ? "alert-danger" : "alert-success") mt-2">@refreshDetailsMessage</div>
+        }
+    </div>
+</div>
 @* ==================== ИНФОРМАЦИЯ О БД ==================== *@
 <div class="card mb-4">
     <div class="card-body">
@@ -305,6 +319,55 @@
     private bool isBackupCreating;
     private string? backupMessage;
     private bool backupIsError;
+
+    private bool isRefreshingDetails;
+    private string? refreshDetailsMessage;
+    private bool refreshDetailsIsError;
+
+    private async Task RefreshBondDetails()
+    {
+        isRefreshingDetails = true;
+        refreshDetailsMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+            client.BaseAddress = new Uri(Navigation.BaseUri);
+            var token = await AuthService.GetToken();
+            if (!string.IsNullOrEmpty(token))
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var response = await client.PostAsync("api/admin/refresh-bond-details", null);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<RefreshBondDetailsResult>();
+                refreshDetailsMessage = $"Обновлено: {result?.Updated} из {result?.Total}";
+                refreshDetailsIsError = false;
+            }
+            else
+            {
+                refreshDetailsMessage = $"Ошибка: {response.StatusCode}";
+                refreshDetailsIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            refreshDetailsMessage = $"Ошибка: {ex.Message}";
+            refreshDetailsIsError = true;
+        }
+        finally
+        {
+            isRefreshingDetails = false;
+            StateHasChanged();
+        }
+    }
+
+    private class RefreshBondDetailsResult
+    {
+        public int Updated { get; set; }
+        public int Total { get; set; }
+    }
 
     private async Task RefreshBackups()
     {

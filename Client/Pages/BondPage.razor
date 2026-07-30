@@ -28,6 +28,22 @@ else if (bond != null)
                 {
                     <span> | Тип: @bond.AssetTypeName</span>
                 }
+                @if (bond.NextCouponDate.HasValue)
+                {
+                <p>📅 Ближайший купон: <strong>@bond.NextCouponDate.Value.ToString("dd.MM.yyyy")</strong></p>
+            }
+            @if (bond.FaceValue.HasValue)
+            {
+                <p>💰 Номинал: <strong>@bond.FaceValue.Value.ToString("F2")</strong></p>
+            }
+            @if (bond.IssueSize.HasValue)
+            {
+                <p>📦 Бумаг в выпуске: <strong>@bond.IssueSize.Value.ToString("N0")</strong></p>
+                @if (bond.FaceValue.HasValue)
+                {
+                    <p>🏦 Объём выпуска: <strong>@((bond.IssueSize.Value * bond.FaceValue.Value).ToString("C0"))</strong></p>
+                }
+            }
             </p>
         </div>
         <div class="col-md-4 text-end">

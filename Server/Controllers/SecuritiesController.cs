@@ -13,7 +13,7 @@ namespace InvestmentTracker.Server.Controllers
     public class SecuritiesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
-       
+
         public SecuritiesController(ApplicationDbContext context)
         {
             _context = context;
@@ -34,7 +34,12 @@ namespace InvestmentTracker.Server.Controllers
                     Isin = s.Isin,
                     Name = s.Name,
                     AssetTypeId = s.AssetTypeId,
-                    AssetTypeName = s.AssetType.Name
+                    AssetTypeName = s.AssetType.Name,
+                    NextCouponDate = s.NextCouponDate,
+                    IssueSize = s.IssueSize,
+                    FaceValue = s.FaceValue,
+                    AccruedInterest = s.AccruedInterest,
+                    Rating = s.Rating
                 })
                 .ToListAsync();
 
@@ -56,13 +61,19 @@ namespace InvestmentTracker.Server.Controllers
                     Isin = s.Isin,
                     Name = s.Name,
                     AssetTypeId = s.AssetTypeId,
-                    AssetTypeName = s.AssetType.Name
+                    AssetTypeName = s.AssetType.Name,
+                    NextCouponDate = s.NextCouponDate,
+                    IssueSize = s.IssueSize,
+                    FaceValue = s.FaceValue,
+                    AccruedInterest = s.AccruedInterest,
+                    Rating = s.Rating
                 })
                 .ToListAsync();
 
             return Ok(ofz);
         }
 
+        // GET api/securities/byTicker/{ticker} – получение одной бумаги по тикеру
         [HttpGet("byTicker/{ticker}")]
         [AllowAnonymous]
         public async Task<ActionResult<SecurityDto>> GetByTicker(string ticker)
@@ -80,12 +91,18 @@ namespace InvestmentTracker.Server.Controllers
                 Isin = security.Isin,
                 Name = security.Name,
                 AssetTypeId = security.AssetTypeId,
-                AssetTypeName = security.AssetType?.Name
+                AssetTypeName = security.AssetType?.Name,
+                NextCouponDate = security.NextCouponDate,
+                IssueSize = security.IssueSize,
+                FaceValue = security.FaceValue,
+                AccruedInterest = security.AccruedInterest,
+                Rating = security.Rating
             });
         }
 
+        // GET api/securities – получить все бумаги
         [HttpGet]
-        [AllowAnonymous]   // гости и все могут видеть список бумаг
+        [AllowAnonymous]
         public async Task<ActionResult<List<SecurityDto>>> GetAll()
         {
             var securities = await _context.Securities
@@ -97,13 +114,19 @@ namespace InvestmentTracker.Server.Controllers
                     Isin = s.Isin,
                     Name = s.Name,
                     AssetTypeId = s.AssetTypeId,
-                    AssetTypeName = s.AssetType.Name
+                    AssetTypeName = s.AssetType.Name,
+                    NextCouponDate = s.NextCouponDate,
+                    IssueSize = s.IssueSize,
+                    FaceValue = s.FaceValue,
+                    AccruedInterest = s.AccruedInterest,
+                    Rating = s.Rating
                 })
                 .ToListAsync();
 
             return Ok(securities);
         }
 
+        // POST api/securities/refresh-types – обновить типы (админ)
         [HttpPost("refresh-types")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> RefreshSecurityTypes()
@@ -134,6 +157,7 @@ namespace InvestmentTracker.Server.Controllers
             return Ok(new { Updated = updated, Total = securities.Count, Errors = errors.Take(10) });
         }
 
+        // GET api/securities/{id} – получить бумагу по ID
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<ActionResult<SecurityDto>> GetById(int id)
@@ -151,13 +175,18 @@ namespace InvestmentTracker.Server.Controllers
                 Isin = security.Isin,
                 Name = security.Name,
                 AssetTypeId = security.AssetTypeId,
-                AssetTypeName = security.AssetType.Name
+                AssetTypeName = security.AssetType.Name,
+                NextCouponDate = security.NextCouponDate,
+                IssueSize = security.IssueSize,
+                FaceValue = security.FaceValue,
+                AccruedInterest = security.AccruedInterest,
+                Rating = security.Rating
             });
         }
-        
 
+        // GET api/securities/lookup – поиск бумаги на MOEX
         [HttpGet("lookup")]
-        [AllowAnonymous]   // поиск тикера нужен всем
+        [AllowAnonymous]
         public async Task<ActionResult<SecurityDto?>> Lookup([FromQuery] string? ticker, [FromQuery] string? isin)
         {
             if (string.IsNullOrWhiteSpace(ticker) && string.IsNullOrWhiteSpace(isin))
@@ -178,17 +207,24 @@ namespace InvestmentTracker.Server.Controllers
             if (info == null)
                 return NotFound();
 
+            // MOEX не возвращает детали, поэтому поля останутся null
             return Ok(new SecurityDto
             {
                 Ticker = info.Ticker,
                 Isin = info.Isin,
                 Name = info.Name,
-                AssetTypeId = info.AssetTypeId ?? 0
+                AssetTypeId = info.AssetTypeId ?? 0,
+                NextCouponDate = null,
+                IssueSize = null,
+                FaceValue = null,
+                AccruedInterest = null,
+                Rating = null
             });
         }
 
+        // GET api/securities/{id}/price – текущая цена
         [HttpGet("{id}/price")]
-        [AllowAnonymous]   // получение текущей цены нужно всем
+        [AllowAnonymous]
         public async Task<ActionResult<decimal?>> GetCurrentPrice(int id)
         {
             var security = await _context.Securities.FindAsync(id);
@@ -219,6 +255,7 @@ namespace InvestmentTracker.Server.Controllers
             return Ok((decimal?)null);
         }
 
+        // POST api/securities – добавить бумагу
         [HttpPost]
         public async Task<ActionResult<SecurityDto>> Create(SecurityDto dto)
         {
@@ -242,7 +279,12 @@ namespace InvestmentTracker.Server.Controllers
                 Ticker = dto.Ticker,
                 Isin = dto.Isin,
                 Name = dto.Name,
-                AssetTypeId = dto.AssetTypeId
+                AssetTypeId = dto.AssetTypeId,
+                NextCouponDate = dto.NextCouponDate,
+                IssueSize = dto.IssueSize,
+                FaceValue = dto.FaceValue,
+                AccruedInterest = dto.AccruedInterest,
+                Rating = dto.Rating
             };
 
             _context.Securities.Add(security);
@@ -254,8 +296,9 @@ namespace InvestmentTracker.Server.Controllers
             return CreatedAtAction(nameof(GetById), new { id = security.Id }, dto);
         }
 
+        // DELETE api/securities/{id} – удалить бумагу
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]   // только админ может удалять
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(int id)
         {
             var security = await _context.Securities.FindAsync(id);

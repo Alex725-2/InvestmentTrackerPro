@@ -1,4 +1,5 @@
-﻿using InvestmentTracker.Server.Data;
+﻿using InvestmentTracker.Client.Pages;
+using InvestmentTracker.Server.Data;
 using InvestmentTracker.Server.Models;
 using InvestmentTracker.Server.Services;
 using InvestmentTracker.Shared.Models;
@@ -24,6 +25,52 @@ namespace InvestmentTracker.Server.Controllers
         {
             var backupService = _serviceProvider.GetRequiredService<BackupService>();
             return Ok(await backupService.GetBackupsAsync());
+        }
+
+        [HttpPost("refresh-bond-details")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> RefreshBondDetails()
+        {
+            var moexService = _serviceProvider.GetRequiredService<MoexService>();
+            var context = _serviceProvider.GetRequiredService<ApplicationDbContext>();
+            var statusService = _serviceProvider.GetRequiredService<BackgroundJobStatusService>();
+
+            statusService.SetRunning("refresh-bond-details");
+            int updated = 0;
+            List<Security> bonds = new();   // <-- объявили здесь, чтобы было видно в finally
+
+            try
+            {
+                bonds = await context.Securities
+                    .Where(s => s.AssetType.Name == "Облигация" &&
+                               (s.NextCouponDate == null || s.IssueSize == null || s.FaceValue == null))
+                    .ToListAsync();
+
+                foreach (var bond in bonds)
+                {
+                    try
+                    {
+                        var success = await moexService.FillBondDetailsAsync(bond);
+                        if (success)
+                        {
+                            updated++;
+                        }
+                    }
+                    catch
+                    {
+                        // пропускаем ошибки по отдельным бумагам
+                    }
+                }
+
+                if (updated > 0)
+                    await context.SaveChangesAsync();
+            }
+            finally
+            {
+                statusService.SetCompleted("refresh-bond-details");
+            }
+
+            return Ok(new { Updated = updated, Total = bonds.Count });
         }
 
         [HttpPost("backups/create")]

@@ -18,7 +18,14 @@ namespace InvestmentTracker.Server.Models
         public int AssetTypeId { get; set; }
         public AssetType AssetType { get; set; } = null!;
 
-        // Навигационное свойство
+        // Новые поля
+        public DateTime? NextCouponDate { get; set; }       // ближайшая дата купона
+        public decimal? AccruedInterest { get; set; }        // НКД в рублях
+        public long? IssueSize { get; set; }                 // количество бумаг в выпуске
+        public decimal? FaceValue { get; set; }              // номинал одной бумаги
+        [MaxLength(20)]
+        public string? Rating { get; set; }                  // рейтинг (пока вручную)
+
         public ICollection<PortfolioItem> PortfolioItems { get; set; } = new List<PortfolioItem>();
     }
 }

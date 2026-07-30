@@ -1,4 +1,5 @@
-﻿using InvestmentTracker.Shared.Models;
+﻿using InvestmentTracker.Server.Models;
+using InvestmentTracker.Shared.Models;
 using System.Globalization;
 using System.Text.Json;
 
@@ -13,6 +14,52 @@ namespace InvestmentTracker.Server.Services
         {
             _httpClient = httpClient;
             _logger = logger;
+        }
+
+        public async Task<bool> FillBondDetailsAsync(Security bond)
+        {
+            try
+            {
+                var url = $"https://iss.moex.com/iss/securities/{bond.Ticker.ToUpper()}.json";
+                using var stream = await _httpClient.GetStreamAsync(url);
+                using var doc = await JsonDocument.ParseAsync(stream);
+                var root = doc.RootElement;
+
+                // Парсим description
+                if (root.TryGetProperty("description", out var desc) && desc.TryGetProperty("data", out var data))
+                {
+                    foreach (var row in data.EnumerateArray())
+                    {
+                        var name = row[0].GetString();
+                        var value = row[2].GetString();
+                        switch (name)
+                        {
+                            case "COUPONDATE":
+                                if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var cd))
+                                    bond.NextCouponDate = cd;
+                                break;
+                            case "ISSUESIZE":
+                                if (long.TryParse(value, out var issueSize))
+                                    bond.IssueSize = issueSize;
+                                break;
+                            case "FACEVALUE":
+                                if (decimal.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var fv))
+                                    bond.FaceValue = fv;
+                                break;
+                        }
+                    }
+                }
+
+                // Парсим marketdata для НКД (опционально, можно сделать отдельным запросом)
+                // ...
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error filling bond details for {Ticker}", bond.Ticker);
+                return false;
+            }
         }
 
         public async Task<List<(DateTime Date, decimal Amount, string Currency)>> GetCouponsAsync(string ticker)
